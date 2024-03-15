@@ -1,0 +1,1016 @@
+
+abort() was called at PC 0x40087f67 on core 0
+0x40087f67: vPortTaskWrapper at /Users/ulissesmaffa/esp/esp-idf/components/freertos/FreeRTOS-Kernel/portable/xtensa/port.c:166
+
+
+
+Backtrace: 0x4008172a:0x3ffb6c40 0x40085899:0x3ffb6c60 0x4008acda:0x3ffb6c80 0x40087f67:0x3ffb6cf0
+0x4008172a: panic_abort at /Users/ulissesmaffa/esp/esp-idf/components/esp_system/panic.c:451
+
+0x40085899: esp_system_abort at /Users/ulissesmaffa/esp/esp-idf/components/esp_system/port/esp_system_chip.c:84
+
+0x4008acda: abort at /Users/ulissesmaffa/esp/esp-idf/components/newlib/abort.c:38
+
+0x40087f67: vPortTaskWrapper at /Users/ulissesmaffa/esp/esp-idf/components/freertos/FreeRTOS-Kernel/portable/xtensa/port.c:166
+
+
+
+
+
+ELF file SHA256: 482d7c4a931a6d55
+
+Rebooting...
+ets Jun  8 2016 00:22:57
+
+rst:0xc (SW_CPU_RESET),boot:0x13 (SPI_FAST_FLASH_BOOT)
+configsip: 0, SPIWP:0xee
+clk_drv:0x00,q_drv:0x00,d_drv:0x00,cs0_drv:0x00,hd_drv:0x00,wp_drv:0x00
+mode:DIO, clock div:2
+load:0x3fff0030,len:7096
+load:0x40078000,len:15624
+load:0x40080400,len:4
+0x40080400: _init at ??:?
+
+load:0x40080404,len:3872
+entry 0x40080648
+I (29) boot: ESP-IDF v5.2-dev-132-gef64e4e5b3 2nd stage bootloader
+I (29) boot: compile time Feb 12 2024 09:39:52
+I (31) boot: Multicore bootloader
+I (35) boot: chip revision: v1.0
+I (39) boot.esp32: SPI Speed      : 40MHz
+I (43) boot.esp32: SPI Mode       : DIO
+I (48) boot.esp32: SPI Flash Size : 2MB
+I (52) boot: Enabling RNG early entropy source...
+I (58) boot: Partition Table:
+I (61) boot: ## Label            Usage          Type ST Offset   Length
+I (69) boot:  0 nvs              WiFi data        01 02 00009000 00006000
+I (76) boot:  1 phy_init         RF data          01 01 0000f000 00001000
+I (84) boot:  2 factory          factory app      00 00 00010000 00100000
+I (91) boot: End of partition table
+I (95) esp_image: segment 0: paddr=00010020 vaddr=3f400020 size=0a0a8h ( 41128) map
+I (119) esp_image: segment 1: paddr=0001a0d0 vaddr=3ffb0000 size=02158h (  8536) load
+I (122) esp_image: segment 2: paddr=0001c230 vaddr=40080000 size=03de8h ( 15848) load
+I (131) esp_image: segment 3: paddr=00020020 vaddr=400d0020 size=16410h ( 91152) map
+I (166) esp_image: segment 4: paddr=00036438 vaddr=40083de8 size=08370h ( 33648) load
+I (186) boot: Loaded app from partition at offset 0x10000
+I (186) boot: Disabling RNG early entropy source...
+I (198) cpu_start: Multicore app
+I (198) cpu_start: Pro cpu up.
+I (198) cpu_start: Starting app cpu, entry point is 0x40081108
+0x40081108: call_start_cpu1 at /Users/ulissesmaffa/esp/esp-idf/components/esp_system/port/cpu_start.c:159
+
+I (187) cpu_start: App cpu up.
+I (216) cpu_start: Pro cpu start user code
+I (216) cpu_start: cpu freq: 160000000 Hz
+I (216) cpu_start: Application information:
+I (221) cpu_start: Project name:     agronet2
+I (226) cpu_start: App version:      1
+I (231) cpu_start: Compile time:     Feb 12 2024 10:17:49
+I (237) cpu_start: ELF file SHA256:  482d7c4a931a6d55...
+I (243) cpu_start: ESP-IDF:          v5.2-dev-132-gef64e4e5b3
+I (249) cpu_start: Min chip rev:     v0.0
+I (254) cpu_start: Max chip rev:     v3.99 
+I (259) cpu_start: Chip rev:         v1.0
+I (264) heap_init: Initializing. RAM available for dynamic allocation:
+I (271) heap_init: At 3FFAE6E0 len 00001920 (6 KiB): DRAM
+I (277) heap_init: At 3FFB29F0 len 0002D610 (181 KiB): DRAM
+I (283) heap_init: At 3FFE0440 len 00003AE0 (14 KiB): D/IRAM
+I (289) heap_init: At 3FFE4350 len 0001BCB0 (111 KiB): D/IRAM
+I (296) heap_init: At 4008C158 len 00013EA8 (79 KiB): IRAM
+I (303) spi_flash: detected chip: generic
+I (306) spi_flash: flash io: dio
+W (310) spi_flash: Detected size(4096k) larger than the size in the binary image header(2048k). Using the size in the binary image header.
+W (324) pcnt(legacy): legacy driver is deprecated, please migrate to `driver/pulse_cnt.h`
+W (332) timer_group: legacy driver is deprecated, please migrate to `driver/gptimer.h`
+I (341) app_start: Starting scheduler on CPU0
+I (346) app_start: Starting scheduler on CPU1
+I (346) main_task: Started on CPU0
+I (356) main_task: Calling app_main()
+I (356) main_task: Returned from app_main()
+E (366) FreeRTOS: FreeRTOS Task "temp_task" should not return, Aborting now!
+
+abort() was called at PC 0x40087f67 on core 0
+0x40087f67: vPortTaskWrapper at /Users/ulissesmaffa/esp/esp-idf/components/freertos/FreeRTOS-Kernel/portable/xtensa/port.c:166
+
+
+
+Backtrace: 0x4008172a:0x3ffb6c40 0x40085899:0x3ffb6c60 0x4008acda:0x3ffb6c80 0x40087f67:0x3ffb6cf0
+0x4008172a: panic_abort at /Users/ulissesmaffa/esp/esp-idf/components/esp_system/panic.c:451
+
+0x40085899: esp_system_abort at /Users/ulissesmaffa/esp/esp-idf/components/esp_system/port/esp_system_chip.c:84
+
+0x4008acda: abort at /Users/ulissesmaffa/esp/esp-idf/components/newlib/abort.c:38
+
+0x40087f67: vPortTaskWrapper at /Users/ulissesmaffa/esp/esp-idf/components/freertos/FreeRTOS-Kernel/portable/xtensa/port.c:166
+
+
+
+
+
+ELF file SHA256: 482d7c4a931a6d55
+
+Rebooting...
+ets Jun  8 2016 00:22:57
+
+rst:0xc (SW_CPU_RESET),boot:0x13 (SPI_FAST_FLASH_BOOT)
+configsip: 0, SPIWP:0xee
+clk_drv:0x00,q_drv:0x00,d_drv:0x00,cs0_drv:0x00,hd_drv:0x00,wp_drv:0x00
+mode:DIO, clock div:2
+load:0x3fff0030,len:7096
+load:0x40078000,len:15624
+load:0x40080400,len:4
+0x40080400: _init at ??:?
+
+load:0x40080404,len:3872
+entry 0x40080648
+I (29) boot: ESP-IDF v5.2-dev-132-gef64e4e5b3 2nd stage bootloader
+I (29) boot: compile time Feb 12 2024 09:39:52
+I (31) boot: Multicore bootloader
+I (35) boot: chip revision: v1.0
+I (39) boot.esp32: SPI Speed      : 40MHz
+I (43) boot.esp32: SPI Mode       : DIO
+I (48) boot.esp32: SPI Flash Size : 2MB
+I (52) boot: Enabling RNG early entropy source...
+I (58) boot: Partition Table:
+I (61) boot: ## Label            Usage          Type ST Offset   Length
+I (69) boot:  0 nvs              WiFi data        01 02 00009000 00006000
+I (76) boot:  1 phy_init         RF data          01 01 0000f000 00001000
+I (84) boot:  2 factory          factory app      00 00 00010000 00100000
+I (91) boot: End of partition table
+I (95) esp_image: segment 0: paddr=00010020 vaddr=3f400020 size=0a0a8h ( 41128) map
+I (119) esp_image: segment 1: paddr=0001a0d0 vaddr=3ffb0000 size=02158h (  8536) load
+I (122) esp_image: segment 2: paddr=0001c230 vaddr=40080000 size=03de8h ( 15848) load
+I (131) esp_image: segment 3: paddr=00020020 vaddr=400d0020 size=16410h ( 91152) map
+I (166) esp_image: segment 4: paddr=00036438 vaddr=40083de8 size=08370h ( 33648) load
+I (186) boot: Loaded app from partition at offset 0x10000
+I (186) boot: Disabling RNG early entropy source...
+I (198) cpu_start: Multicore app
+I (198) cpu_start: Pro cpu up.
+I (198) cpu_start: Starting app cpu, entry point is 0x40081108
+0x40081108: call_start_cpu1 at /Users/ulissesmaffa/esp/esp-idf/components/esp_system/port/cpu_start.c:159
+
+I (187) cpu_start: App cpu up.
+I (216) cpu_start: Pro cpu start user code
+I (216) cpu_start: cpu freq: 160000000 Hz
+I (216) cpu_start: Application information:
+I (221) cpu_start: Project name:     agronet2
+I (226) cpu_start: App version:      1
+I (231) cpu_start: Compile time:     Feb 12 2024 10:17:49
+I (237) cpu_start: ELF file SHA256:  482d7c4a931a6d55...
+I (243) cpu_start: ESP-IDF:          v5.2-dev-132-gef64e4e5b3
+I (249) cpu_start: Min chip rev:     v0.0
+I (254) cpu_start: Max chip rev:     v3.99 
+I (259) cpu_start: Chip rev:         v1.0
+I (264) heap_init: Initializing. RAM available for dynamic allocation:
+I (271) heap_init: At 3FFAE6E0 len 00001920 (6 KiB): DRAM
+I (277) heap_init: At 3FFB29F0 len 0002D610 (181 KiB): DRAM
+I (283) heap_init: At 3FFE0440 len 00003AE0 (14 KiB): D/IRAM
+I (289) heap_init: At 3FFE4350 len 0001BCB0 (111 KiB): D/IRAM
+I (296) heap_init: At 4008C158 len 00013EA8 (79 KiB): IRAM
+I (303) spi_flash: detected chip: generic
+I (306) spi_flash: flash io: dio
+W (310) spi_flash: Detected size(4096k) larger than the size in the binary image header(2048k). Using the size in the binary image header.
+W (324) pcnt(legacy): legacy driver is deprecated, please migrate to `driver/pulse_cnt.h`
+W (332) timer_group: legacy driver is deprecated, please migrate to `driver/gptimer.h`
+I (341) app_start: Starting scheduler on CPU0
+I (346) app_start: Starting scheduler on CPU1
+I (346) main_task: Started on CPU0
+I (356) main_task: Calling app_main()
+I (356) main_task: Returned from app_main()
+E (366) FreeRTOS: FreeRTOS Task "temp_task" should not return, Aborting now!
+
+abort() was called at PC 0x40087f67 on core 0
+0x40087f67: vPortTaskWrapper at /Users/ulissesmaffa/esp/esp-idf/components/freertos/FreeRTOS-Kernel/portable/xtensa/port.c:166
+
+
+
+Backtrace: 0x4008172a:0x3ffb6c40 0x40085899:0x3ffb6c60 0x4008acda:0x3ffb6c80 0x40087f67:0x3ffb6cf0
+0x4008172a: panic_abort at /Users/ulissesmaffa/esp/esp-idf/components/esp_system/panic.c:451
+
+0x40085899: esp_system_abort at /Users/ulissesmaffa/esp/esp-idf/components/esp_system/port/esp_system_chip.c:84
+
+0x4008acda: abort at /Users/ulissesmaffa/esp/esp-idf/components/newlib/abort.c:38
+
+0x40087f67: vPortTaskWrapper at /Users/ulissesmaffa/esp/esp-idf/components/freertos/FreeRTOS-Kernel/portable/xtensa/port.c:166
+
+
+
+
+
+ELF file SHA256: 482d7c4a931a6d55
+
+Rebooting...
+ets Jun  8 2016 00:22:57
+
+rst:0xc (SW_CPU_RESET),boot:0x13 (SPI_FAST_FLASH_BOOT)
+configsip: 0, SPIWP:0xee
+clk_drv:0x00,q_drv:0x00,d_drv:0x00,cs0_drv:0x00,hd_drv:0x00,wp_drv:0x00
+mode:DIO, clock div:2
+load:0x3fff0030,len:7096
+load:0x40078000,len:15624
+load:0x40080400,len:4
+0x40080400: _init at ??:?
+
+load:0x40080404,len:3872
+entry 0x40080648
+I (29) boot: ESP-IDF v5.2-dev-132-gef64e4e5b3 2nd stage bootloader
+I (29) boot: compile time Feb 12 2024 09:39:52
+I (31) boot: Multicore bootloader
+I (35) boot: chip revision: v1.0
+I (39) boot.esp32: SPI Speed      : 40MHz
+I (43) boot.esp32: SPI Mode       : DIO
+I (48) boot.esp32: SPI Flash Size : 2MB
+I (52) boot: Enabling RNG early entropy source...
+I (58) boot: Partition Table:
+I (61) boot: ## Label            Usage          Type ST Offset   Length
+I (69) boot:  0 nvs              WiFi data        01 02 00009000 00006000
+I (76) boot:  1 phy_init         RF data          01 01 0000f000 00001000
+I (84) boot:  2 factory          factory app      00 00 00010000 00100000
+I (91) boot: End of partition table
+I (95) esp_image: segment 0: paddr=00010020 vaddr=3f400020 size=0a0a8h ( 41128) map
+I (119) esp_image: segment 1: paddr=0001a0d0 vaddr=3ffb0000 size=02158h (  8536) load
+I (122) esp_image: segment 2: paddr=0001c230 vaddr=40080000 size=03de8h ( 15848) load
+I (131) esp_image: segment 3: paddr=00020020 vaddr=400d0020 size=16410h ( 91152) map
+I (166) esp_image: segment 4: paddr=00036438 vaddr=40083de8 size=08370h ( 33648) load
+I (186) boot: Loaded app from partition at offset 0x10000
+I (186) boot: Disabling RNG early entropy source...
+I (198) cpu_start: Multicore app
+I (198) cpu_start: Pro cpu up.
+I (198) cpu_start: Starting app cpu, entry point is 0x40081108
+0x40081108: call_start_cpu1 at /Users/ulissesmaffa/esp/esp-idf/components/esp_system/port/cpu_start.c:159
+
+I (187) cpu_start: App cpu up.
+I (216) cpu_start: Pro cpu start user code
+I (216) cpu_start: cpu freq: 160000000 Hz
+I (216) cpu_start: Application information:
+I (221) cpu_start: Project name:     agronet2
+I (226) cpu_start: App version:      1
+I (231) cpu_start: Compile time:     Feb 12 2024 10:17:49
+I (237) cpu_start: ELF file SHA256:  482d7c4a931a6d55...
+I (243) cpu_start: ESP-IDF:          v5.2-dev-132-gef64e4e5b3
+I (249) cpu_start: Min chip rev:     v0.0
+I (254) cpu_start: Max chip rev:     v3.99 
+I (259) cpu_start: Chip rev:         v1.0
+I (264) heap_init: Initializing. RAM available for dynamic allocation:
+I (271) heap_init: At 3FFAE6E0 len 00001920 (6 KiB): DRAM
+I (277) heap_init: At 3FFB29F0 len 0002D610 (181 KiB): DRAM
+I (283) heap_init: At 3FFE0440 len 00003AE0 (14 KiB): D/IRAM
+I (289) heap_init: At 3FFE4350 len 0001BCB0 (111 KiB): D/IRAM
+I (296) heap_init: At 4008C158 len 00013EA8 (79 KiB): IRAM
+I (303) spi_flash: detected chip: generic
+I (306) spi_flash: flash io: dio
+W (310) spi_flash: Detected size(4096k) larger than the size in the binary image header(2048k). Using the size in the binary image header.
+W (324) pcnt(legacy): legacy driver is deprecated, please migrate to `driver/pulse_cnt.h`
+W (332) timer_group: legacy driver is deprecated, please migrate to `driver/gptimer.h`
+I (341) app_start: Starting scheduler on CPU0
+I (346) app_start: Starting scheduler on CPU1
+I (346) main_task: Started on CPU0
+I (356) main_task: Calling app_main()
+I (356) main_task: Returned from app_main()
+E (366) FreeRTOS: FreeRTOS Task "temp_task" should not return, Aborting now!
+
+abort() was called at PC 0x40087f67 on core 0
+0x40087f67: vPortTaskWrapper at /Users/ulissesmaffa/esp/esp-idf/components/freertos/FreeRTOS-Kernel/portable/xtensa/port.c:166
+
+
+
+Backtrace: 0x4008172a:0x3ffb6c40 0x40085899:0x3ffb6c60 0x4008acda:0x3ffb6c80 0x40087f67:0x3ffb6cf0
+0x4008172a: panic_abort at /Users/ulissesmaffa/esp/esp-idf/components/esp_system/panic.c:451
+
+0x40085899: esp_system_abort at /Users/ulissesmaffa/esp/esp-idf/components/esp_system/port/esp_system_chip.c:84
+
+0x4008acda: abort at /Users/ulissesmaffa/esp/esp-idf/components/newlib/abort.c:38
+
+0x40087f67: vPortTaskWrapper at /Users/ulissesmaffa/esp/esp-idf/components/freertos/FreeRTOS-Kernel/portable/xtensa/port.c:166
+
+
+
+
+
+ELF file SHA256: 482d7c4a931a6d55
+
+Rebooting...
+ets Jun  8 2016 00:22:57
+
+rst:0xc (SW_CPU_RESET),boot:0x13 (SPI_FAST_FLASH_BOOT)
+configsip: 0, SPIWP:0xee
+clk_drv:0x00,q_drv:0x00,d_drv:0x00,cs0_drv:0x00,hd_drv:0x00,wp_drv:0x00
+mode:DIO, clock div:2
+load:0x3fff0030,len:7096
+load:0x40078000,len:15624
+load:0x40080400,len:4
+0x40080400: _init at ??:?
+
+load:0x40080404,len:3872
+entry 0x40080648
+I (29) boot: ESP-IDF v5.2-dev-132-gef64e4e5b3 2nd stage bootloader
+I (29) boot: compile time Feb 12 2024 09:39:52
+I (31) boot: Multicore bootloader
+I (35) boot: chip revision: v1.0
+I (39) boot.esp32: SPI Speed      : 40MHz
+I (43) boot.esp32: SPI Mode       : DIO
+I (48) boot.esp32: SPI Flash Size : 2MB
+I (52) boot: Enabling RNG early entropy source...
+I (58) boot: Partition Table:
+I (61) boot: ## Label            Usage          Type ST Offset   Length
+I (69) boot:  0 nvs              WiFi data        01 02 00009000 00006000
+I (76) boot:  1 phy_init         RF data          01 01 0000f000 00001000
+I (84) boot:  2 factory          factory app      00 00 00010000 00100000
+I (91) boot: End of partition table
+I (95) esp_image: segment 0: paddr=00010020 vaddr=3f400020 size=0a0a8h ( 41128) map
+I (119) esp_image: segment 1: paddr=0001a0d0 vaddr=3ffb0000 size=02158h (  8536) load
+I (122) esp_image: segment 2: paddr=0001c230 vaddr=40080000 size=03de8h ( 15848) load
+I (131) esp_image: segment 3: paddr=00020020 vaddr=400d0020 size=16410h ( 91152) map
+I (166) esp_image: segment 4: paddr=00036438 vaddr=40083de8 size=08370h ( 33648) load
+I (186) boot: Loaded app from partition at offset 0x10000
+I (186) boot: Disabling RNG early entropy source...
+I (198) cpu_start: Multicore app
+I (198) cpu_start: Pro cpu up.
+I (198) cpu_start: Starting app cpu, entry point is 0x40081108
+0x40081108: call_start_cpu1 at /Users/ulissesmaffa/esp/esp-idf/components/esp_system/port/cpu_start.c:159
+
+I (187) cpu_start: App cpu up.
+I (216) cpu_start: Pro cpu start user code
+I (216) cpu_start: cpu freq: 160000000 Hz
+I (216) cpu_start: Application information:
+I (221) cpu_start: Project name:     agronet2
+I (226) cpu_start: App version:      1
+I (231) cpu_start: Compile time:     Feb 12 2024 10:17:49
+I (237) cpu_start: ELF file SHA256:  482d7c4a931a6d55...
+I (243) cpu_start: ESP-IDF:          v5.2-dev-132-gef64e4e5b3
+I (249) cpu_start: Min chip rev:     v0.0
+I (254) cpu_start: Max chip rev:     v3.99 
+I (259) cpu_start: Chip rev:         v1.0
+I (264) heap_init: Initializing. RAM available for dynamic allocation:
+I (271) heap_init: At 3FFAE6E0 len 00001920 (6 KiB): DRAM
+I (277) heap_init: At 3FFB29F0 len 0002D610 (181 KiB): DRAM
+I (283) heap_init: At 3FFE0440 len 00003AE0 (14 KiB): D/IRAM
+I (289) heap_init: At 3FFE4350 len 0001BCB0 (111 KiB): D/IRAM
+I (296) heap_init: At 4008C158 len 00013EA8 (79 KiB): IRAM
+I (303) spi_flash: detected chip: generic
+I (306) spi_flash: flash io: dio
+W (310) spi_flash: Detected size(4096k) larger than the size in the binary image header(2048k). Using the size in the binary image header.
+W (324) pcnt(legacy): legacy driver is deprecated, please migrate to `driver/pulse_cnt.h`
+W (332) timer_group: legacy driver is deprecated, please migrate to `driver/gptimer.h`
+I (341) app_start: Starting scheduler on CPU0
+I (346) app_start: Starting scheduler on CPU1
+I (346) main_task: Started on CPU0
+I (356) main_task: Calling app_main()
+I (356) main_task: Returned from app_main()
+E (366) FreeRTOS: FreeRTOS Task "temp_task" should not return, Aborting now!
+
+abort() was called at PC 0x40087f67 on core 0
+0x40087f67: vPortTaskWrapper at /Users/ulissesmaffa/esp/esp-idf/components/freertos/FreeRTOS-Kernel/portable/xtensa/port.c:166
+
+
+
+Backtrace: 0x4008172a:0x3ffb6c40 0x40085899:0x3ffb6c60 0x4008acda:0x3ffb6c80 0x40087f67:0x3ffb6cf0
+0x4008172a: panic_abort at /Users/ulissesmaffa/esp/esp-idf/components/esp_system/panic.c:451
+
+0x40085899: esp_system_abort at /Users/ulissesmaffa/esp/esp-idf/components/esp_system/port/esp_system_chip.c:84
+
+0x4008acda: abort at /Users/ulissesmaffa/esp/esp-idf/components/newlib/abort.c:38
+
+0x40087f67: vPortTaskWrapper at /Users/ulissesmaffa/esp/esp-idf/components/freertos/FreeRTOS-Kernel/portable/xtensa/port.c:166
+
+
+
+
+
+ELF file SHA256: 482d7c4a931a6d55
+
+Rebooting...
+ets Jun  8 2016 00:22:57
+
+rst:0xc (SW_CPU_RESET),boot:0x13 (SPI_FAST_FLASH_BOOT)
+configsip: 0, SPIWP:0xee
+clk_drv:0x00,q_drv:0x00,d_drv:0x00,cs0_drv:0x00,hd_drv:0x00,wp_drv:0x00
+mode:DIO, clock div:2
+load:0x3fff0030,len:7096
+load:0x40078000,len:15624
+load:0x40080400,len:4
+0x40080400: _init at ??:?
+
+load:0x40080404,len:3872
+entry 0x40080648
+I (29) boot: ESP-IDF v5.2-dev-132-gef64e4e5b3 2nd stage bootloader
+I (29) boot: compile time Feb 12 2024 09:39:52
+I (31) boot: Multicore bootloader
+I (35) boot: chip revision: v1.0
+I (39) boot.esp32: SPI Speed      : 40MHz
+I (43) boot.esp32: SPI Mode       : DIO
+I (48) boot.esp32: SPI Flash Size : 2MB
+I (52) boot: Enabling RNG early entropy source...
+I (58) boot: Partition Table:
+I (61) boot: ## Label            Usage          Type ST Offset   Length
+I (69) boot:  0 nvs              WiFi data        01 02 00009000 00006000
+I (76) boot:  1 phy_init         RF data          01 01 0000f000 00001000
+I (84) boot:  2 factory          factory app      00 00 00010000 00100000
+I (91) boot: End of partition table
+I (95) esp_image: segment 0: paddr=00010020 vaddr=3f400020 size=0a0a8h ( 41128) map
+I (119) esp_image: segment 1: paddr=0001a0d0 vaddr=3ffb0000 size=02158h (  8536) load
+I (122) esp_image: segment 2: paddr=0001c230 vaddr=40080000 size=03de8h ( 15848) load
+I (131) esp_image: segment 3: paddr=00020020 vaddr=400d0020 size=16410h ( 91152) map
+I (166) esp_image: segment 4: paddr=00036438 vaddr=40083de8 size=08370h ( 33648) load
+I (186) boot: Loaded app from partition at offset 0x10000
+I (186) boot: Disabling RNG early entropy source...
+I (198) cpu_start: Multicore app
+I (198) cpu_start: Pro cpu up.
+I (198) cpu_start: Starting app cpu, entry point is 0x40081108
+0x40081108: call_start_cpu1 at /Users/ulissesmaffa/esp/esp-idf/components/esp_system/port/cpu_start.c:159
+
+I (187) cpu_start: App cpu up.
+I (216) cpu_start: Pro cpu start user code
+I (216) cpu_start: cpu freq: 160000000 Hz
+I (216) cpu_start: Application information:
+I (221) cpu_start: Project name:     agronet2
+I (226) cpu_start: App version:      1
+I (231) cpu_start: Compile time:     Feb 12 2024 10:17:49
+I (237) cpu_start: ELF file SHA256:  482d7c4a931a6d55...
+I (243) cpu_start: ESP-IDF:          v5.2-dev-132-gef64e4e5b3
+I (249) cpu_start: Min chip rev:     v0.0
+I (254) cpu_start: Max chip rev:     v3.99 
+I (259) cpu_start: Chip rev:         v1.0
+I (264) heap_init: Initializing. RAM available for dynamic allocation:
+I (271) heap_init: At 3FFAE6E0 len 00001920 (6 KiB): DRAM
+I (277) heap_init: At 3FFB29F0 len 0002D610 (181 KiB): DRAM
+I (283) heap_init: At 3FFE0440 len 00003AE0 (14 KiB): D/IRAM
+I (289) heap_init: At 3FFE4350 len 0001BCB0 (111 KiB): D/IRAM
+I (296) heap_init: At 4008C158 len 00013EA8 (79 KiB): IRAM
+I (303) spi_flash: detected chip: generic
+I (306) spi_flash: flash io: dio
+W (310) spi_flash: Detected size(4096k) larger than the size in the binary image header(2048k). Using the size in the binary image header.
+W (324) pcnt(legacy): legacy driver is deprecated, please migrate to `driver/pulse_cnt.h`
+W (332) timer_group: legacy driver is deprecated, please migrate to `driver/gptimer.h`
+I (341) app_start: Starting scheduler on CPU0
+I (346) app_start: Starting scheduler on CPU1
+I (346) main_task: Started on CPU0
+I (356) main_task: Calling app_main()
+I (356) main_task: Returned from app_main()
+E (366) FreeRTOS: FreeRTOS Task "temp_task" should not return, Aborting now!
+
+abort() was called at PC 0x40087f67 on core 0
+0x40087f67: vPortTaskWrapper at /Users/ulissesmaffa/esp/esp-idf/components/freertos/FreeRTOS-Kernel/portable/xtensa/port.c:166
+
+
+
+Backtrace: 0x4008172a:0x3ffb6c40 0x40085899:0x3ffb6c60 0x4008acda:0x3ffb6c80 0x40087f67:0x3ffb6cf0
+0x4008172a: panic_abort at /Users/ulissesmaffa/esp/esp-idf/components/esp_system/panic.c:451
+
+0x40085899: esp_system_abort at /Users/ulissesmaffa/esp/esp-idf/components/esp_system/port/esp_system_chip.c:84
+
+0x4008acda: abort at /Users/ulissesmaffa/esp/esp-idf/components/newlib/abort.c:38
+
+0x40087f67: vPortTaskWrapper at /Users/ulissesmaffa/esp/esp-idf/components/freertos/FreeRTOS-Kernel/portable/xtensa/port.c:166
+
+
+
+
+
+ELF file SHA256: 482d7c4a931a6d55
+
+Rebooting...
+ets Jun  8 2016 00:22:57
+
+rst:0xc (SW_CPU_RESET),boot:0x13 (SPI_FAST_FLASH_BOOT)
+configsip: 0, SPIWP:0xee
+clk_drv:0x00,q_drv:0x00,d_drv:0x00,cs0_drv:0x00,hd_drv:0x00,wp_drv:0x00
+mode:DIO, clock div:2
+load:0x3fff0030,len:7096
+load:0x40078000,len:15624
+load:0x40080400,len:4
+0x40080400: _init at ??:?
+
+load:0x40080404,len:3872
+entry 0x40080648
+I (29) boot: ESP-IDF v5.2-dev-132-gef64e4e5b3 2nd stage bootloader
+I (29) boot: compile time Feb 12 2024 09:39:52
+I (31) boot: Multicore bootloader
+I (35) boot: chip revision: v1.0
+I (39) boot.esp32: SPI Speed      : 40MHz
+I (43) boot.esp32: SPI Mode       : DIO
+I (48) boot.esp32: SPI Flash Size : 2MB
+I (52) boot: Enabling RNG early entropy source...
+I (58) boot: Partition Table:
+I (61) boot: ## Label            Usage          Type ST Offset   Length
+I (69) boot:  0 nvs              WiFi data        01 02 00009000 00006000
+I (76) boot:  1 phy_init         RF data          01 01 0000f000 00001000
+I (84) boot:  2 factory          factory app      00 00 00010000 00100000
+I (91) boot: End of partition table
+I (95) esp_image: segment 0: paddr=00010020 vaddr=3f400020 size=0a0a8h ( 41128) map
+I (119) esp_image: segment 1: paddr=0001a0d0 vaddr=3ffb0000 size=02158h (  8536) load
+I (122) esp_image: segment 2: paddr=0001c230 vaddr=40080000 size=03de8h ( 15848) load
+I (131) esp_image: segment 3: paddr=00020020 vaddr=400d0020 size=16410h ( 91152) map
+I (166) esp_image: segment 4: paddr=00036438 vaddr=40083de8 size=08370h ( 33648) load
+I (186) boot: Loaded app from partition at offset 0x10000
+I (186) boot: Disabling RNG early entropy source...
+I (198) cpu_start: Multicore app
+I (198) cpu_start: Pro cpu up.
+I (198) cpu_start: Starting app cpu, entry point is 0x40081108
+0x40081108: call_start_cpu1 at /Users/ulissesmaffa/esp/esp-idf/components/esp_system/port/cpu_start.c:159
+
+I (187) cpu_start: App cpu up.
+I (216) cpu_start: Pro cpu start user code
+I (216) cpu_start: cpu freq: 160000000 Hz
+I (216) cpu_start: Application information:
+I (221) cpu_start: Project name:     agronet2
+I (226) cpu_start: App version:      1
+I (231) cpu_start: Compile time:     Feb 12 2024 10:17:49
+I (237) cpu_start: ELF file SHA256:  482d7c4a931a6d55...
+I (243) cpu_start: ESP-IDF:          v5.2-dev-132-gef64e4e5b3
+I (249) cpu_start: Min chip rev:     v0.0
+I (254) cpu_start: Max chip rev:     v3.99 
+I (259) cpu_start: Chip rev:         v1.0
+I (264) heap_init: Initializing. RAM available for dynamic allocation:
+I (271) heap_init: At 3FFAE6E0 len 00001920 (6 KiB): DRAM
+I (277) heap_init: At 3FFB29F0 len 0002D610 (181 KiB): DRAM
+I (283) heap_init: At 3FFE0440 len 00003AE0 (14 KiB): D/IRAM
+I (289) heap_init: At 3FFE4350 len 0001BCB0 (111 KiB): D/IRAM
+I (296) heap_init: At 4008C158 len 00013EA8 (79 KiB): IRAM
+I (303) spi_flash: detected chip: generic
+I (306) spi_flash: flash io: dio
+W (310) spi_flash: Detected size(4096k) larger than the size in the binary image header(2048k). Using the size in the binary image header.
+W (324) pcnt(legacy): legacy driver is deprecated, please migrate to `driver/pulse_cnt.h`
+W (332) timer_group: legacy driver is deprecated, please migrate to `driver/gptimer.h`
+I (341) app_start: Starting scheduler on CPU0
+I (346) app_start: Starting scheduler on CPU1
+I (346) main_task: Started on CPU0
+I (356) main_task: Calling app_main()
+I (356) main_task: Returned from app_main()
+E (366) FreeRTOS: FreeRTOS Task "temp_task" should not return, Aborting now!
+
+abort() was called at PC 0x40087f67 on core 0
+0x40087f67: vPortTaskWrapper at /Users/ulissesmaffa/esp/esp-idf/components/freertos/FreeRTOS-Kernel/portable/xtensa/port.c:166
+
+
+
+Backtrace: 0x4008172a:0x3ffb6c40 0x40085899:0x3ffb6c60 0x4008acda:0x3ffb6c80 0x40087f67:0x3ffb6cf0
+0x4008172a: panic_abort at /Users/ulissesmaffa/esp/esp-idf/components/esp_system/panic.c:451
+
+0x40085899: esp_system_abort at /Users/ulissesmaffa/esp/esp-idf/components/esp_system/port/esp_system_chip.c:84
+
+0x4008acda: abort at /Users/ulissesmaffa/esp/esp-idf/components/newlib/abort.c:38
+
+0x40087f67: vPortTaskWrapper at /Users/ulissesmaffa/esp/esp-idf/components/freertos/FreeRTOS-Kernel/portable/xtensa/port.c:166
+
+
+
+
+
+ELF file SHA256: 482d7c4a931a6d55
+
+Rebooting...
+ets Jun  8 2016 00:22:57
+
+rst:0xc (SW_CPU_RESET),boot:0x13 (SPI_FAST_FLASH_BOOT)
+configsip: 0, SPIWP:0xee
+clk_drv:0x00,q_drv:0x00,d_drv:0x00,cs0_drv:0x00,hd_drv:0x00,wp_drv:0x00
+mode:DIO, clock div:2
+load:0x3fff0030,len:7096
+load:0x40078000,len:15624
+load:0x40080400,len:4
+0x40080400: _init at ??:?
+
+load:0x40080404,len:3872
+entry 0x40080648
+I (29) boot: ESP-IDF v5.2-dev-132-gef64e4e5b3 2nd stage bootloader
+I (29) boot: compile time Feb 12 2024 09:39:52
+I (31) boot: Multicore bootloader
+I (35) boot: chip revision: v1.0
+I (39) boot.esp32: SPI Speed      : 40MHz
+I (43) boot.esp32: SPI Mode       : DIO
+I (48) boot.esp32: SPI Flash Size : 2MB
+I (52) boot: Enabling RNG early entropy source...
+I (58) boot: Partition Table:
+I (61) boot: ## Label            Usage          Type ST Offset   Length
+I (69) boot:  0 nvs              WiFi data        01 02 00009000 00006000
+I (76) boot:  1 phy_init         RF data          01 01 0000f000 00001000
+I (84) boot:  2 factory          factory app      00 00 00010000 00100000
+I (91) boot: End of partition table
+I (95) esp_image: segment 0: paddr=00010020 vaddr=3f400020 size=0a0a8h ( 41128) map
+I (119) esp_image: segment 1: paddr=0001a0d0 vaddr=3ffb0000 size=02158h (  8536) load
+I (122) esp_image: segment 2: paddr=0001c230 vaddr=40080000 size=03de8h ( 15848) load
+I (131) esp_image: segment 3: paddr=00020020 vaddr=400d0020 size=16410h ( 91152) map
+I (166) esp_image: segment 4: paddr=00036438 vaddr=40083de8 size=08370h ( 33648) load
+I (186) boot: Loaded app from partition at offset 0x10000
+I (186) boot: Disabling RNG early entropy source...
+I (198) cpu_start: Multicore app
+I (198) cpu_start: Pro cpu up.
+I (198) cpu_start: Starting app cpu, entry point is 0x40081108
+0x40081108: call_start_cpu1 at /Users/ulissesmaffa/esp/esp-idf/components/esp_system/port/cpu_start.c:159
+
+I (187) cpu_start: App cpu up.
+I (216) cpu_start: Pro cpu start user code
+I (216) cpu_start: cpu freq: 160000000 Hz
+I (216) cpu_start: Application information:
+I (221) cpu_start: Project name:     agronet2
+I (226) cpu_start: App version:      1
+I (231) cpu_start: Compile time:     Feb 12 2024 10:17:49
+I (237) cpu_start: ELF file SHA256:  482d7c4a931a6d55...
+I (243) cpu_start: ESP-IDF:          v5.2-dev-132-gef64e4e5b3
+I (249) cpu_start: Min chip rev:     v0.0
+I (254) cpu_start: Max chip rev:     v3.99 
+I (259) cpu_start: Chip rev:         v1.0
+I (264) heap_init: Initializing. RAM available for dynamic allocation:
+I (271) heap_init: At 3FFAE6E0 len 00001920 (6 KiB): DRAM
+I (277) heap_init: At 3FFB29F0 len 0002D610 (181 KiB): DRAM
+I (283) heap_init: At 3FFE0440 len 00003AE0 (14 KiB): D/IRAM
+I (289) heap_init: At 3FFE4350 len 0001BCB0 (111 KiB): D/IRAM
+I (296) heap_init: At 4008C158 len 00013EA8 (79 KiB): IRAM
+I (303) spi_flash: detected chip: generic
+I (306) spi_flash: flash io: dio
+W (310) spi_flash: Detected size(4096k) larger than the size in the binary image header(2048k). Using the size in the binary image header.
+W (324) pcnt(legacy): legacy driver is deprecated, please migrate to `driver/pulse_cnt.h`
+W (332) timer_group: legacy driver is deprecated, please migrate to `driver/gptimer.h`
+I (341) app_start: Starting scheduler on CPU0
+I (346) app_start: Starting scheduler on CPU1
+I (346) main_task: Started on CPU0
+I (356) main_task: Calling app_main()
+I (356) main_task: Returned from app_main()
+E (366) FreeRTOS: FreeRTOS Task "temp_task" should not return, Aborting now!
+
+abort() was called at PC 0x40087f67 on core 0
+0x40087f67: vPortTaskWrapper at /Users/ulissesmaffa/esp/esp-idf/components/freertos/FreeRTOS-Kernel/portable/xtensa/port.c:166
+
+
+
+Backtrace: 0x4008172a:0x3ffb6c40 0x40085899:0x3ffb6c60 0x4008acda:0x3ffb6c80 0x40087f67:0x3ffb6cf0
+0x4008172a: panic_abort at /Users/ulissesmaffa/esp/esp-idf/components/esp_system/panic.c:451
+
+0x40085899: esp_system_abort at /Users/ulissesmaffa/esp/esp-idf/components/esp_system/port/esp_system_chip.c:84
+
+0x4008acda: abort at /Users/ulissesmaffa/esp/esp-idf/components/newlib/abort.c:38
+
+0x40087f67: vPortTaskWrapper at /Users/ulissesmaffa/esp/esp-idf/components/freertos/FreeRTOS-Kernel/portable/xtensa/port.c:166
+
+
+
+
+
+ELF file SHA256: 482d7c4a931a6d55
+
+Rebooting...
+ets Jun  8 2016 00:22:57
+
+rst:0xc (SW_CPU_RESET),boot:0x13 (SPI_FAST_FLASH_BOOT)
+configsip: 0, SPIWP:0xee
+clk_drv:0x00,q_drv:0x00,d_drv:0x00,cs0_drv:0x00,hd_drv:0x00,wp_drv:0x00
+mode:DIO, clock div:2
+load:0x3fff0030,len:7096
+load:0x40078000,len:15624
+load:0x40080400,len:4
+0x40080400: _init at ??:?
+
+load:0x40080404,len:3872
+entry 0x40080648
+I (29) boot: ESP-IDF v5.2-dev-132-gef64e4e5b3 2nd stage bootloader
+I (29) boot: compile time Feb 12 2024 09:39:52
+I (31) boot: Multicore bootloader
+I (35) boot: chip revision: v1.0
+I (39) boot.esp32: SPI Speed      : 40MHz
+I (43) boot.esp32: SPI Mode       : DIO
+I (48) boot.esp32: SPI Flash Size : 2MB
+I (52) boot: Enabling RNG early entropy source...
+I (58) boot: Partition Table:
+I (61) boot: ## Label            Usage          Type ST Offset   Length
+I (69) boot:  0 nvs              WiFi data        01 02 00009000 00006000
+I (76) boot:  1 phy_init         RF data          01 01 0000f000 00001000
+I (84) boot:  2 factory          factory app      00 00 00010000 00100000
+I (91) boot: End of partition table
+I (95) esp_image: segment 0: paddr=00010020 vaddr=3f400020 size=0a0a8h ( 41128) map
+I (119) esp_image: segment 1: paddr=0001a0d0 vaddr=3ffb0000 size=02158h (  8536) load
+I (122) esp_image: segment 2: paddr=0001c230 vaddr=40080000 size=03de8h ( 15848) load
+I (131) esp_image: segment 3: paddr=00020020 vaddr=400d0020 size=16410h ( 91152) map
+I (166) esp_image: segment 4: paddr=00036438 vaddr=40083de8 size=08370h ( 33648) load
+I (186) boot: Loaded app from partition at offset 0x10000
+I (186) boot: Disabling RNG early entropy source...
+I (198) cpu_start: Multicore app
+I (198) cpu_start: Pro cpu up.
+I (198) cpu_start: Starting app cpu, entry point is 0x40081108
+0x40081108: call_start_cpu1 at /Users/ulissesmaffa/esp/esp-idf/components/esp_system/port/cpu_start.c:159
+
+I (187) cpu_start: App cpu up.
+I (216) cpu_start: Pro cpu start user code
+I (216) cpu_start: cpu freq: 160000000 Hz
+I (216) cpu_start: Application information:
+I (221) cpu_start: Project name:     agronet2
+I (226) cpu_start: App version:      1
+I (231) cpu_start: Compile time:     Feb 12 2024 10:17:49
+I (237) cpu_start: ELF file SHA256:  482d7c4a931a6d55...
+I (243) cpu_start: ESP-IDF:          v5.2-dev-132-gef64e4e5b3
+I (249) cpu_start: Min chip rev:     v0.0
+I (254) cpu_start: Max chip rev:     v3.99 
+I (259) cpu_start: Chip rev:         v1.0
+I (264) heap_init: Initializing. RAM available for dynamic allocation:
+I (271) heap_init: At 3FFAE6E0 len 00001920 (6 KiB): DRAM
+I (277) heap_init: At 3FFB29F0 len 0002D610 (181 KiB): DRAM
+I (283) heap_init: At 3FFE0440 len 00003AE0 (14 KiB): D/IRAM
+I (289) heap_init: At 3FFE4350 len 0001BCB0 (111 KiB): D/IRAM
+I (296) heap_init: At 4008C158 len 00013EA8 (79 KiB): IRAM
+I (303) spi_flash: detected chip: generic
+I (306) spi_flash: flash io: dio
+W (310) spi_flash: Detected size(4096k) larger than the size in the binary image header(2048k). Using the size in the binary image header.
+W (324) pcnt(legacy): legacy driver is deprecated, please migrate to `driver/pulse_cnt.h`
+W (332) timer_group: legacy driver is deprecated, please migrate to `driver/gptimer.h`
+I (341) app_start: Starting scheduler on CPU0
+I (346) app_start: Starting scheduler on CPU1
+I (346) main_task: Started on CPU0
+I (356) main_task: Calling app_main()
+I (356) main_task: Returned from app_main()
+E (366) FreeRTOS: FreeRTOS Task "temp_task" should not return, Aborting now!
+
+abort() was called at PC 0x40087f67 on core 0
+0x40087f67: vPortTaskWrapper at /Users/ulissesmaffa/esp/esp-idf/components/freertos/FreeRTOS-Kernel/portable/xtensa/port.c:166
+
+
+
+Backtrace: 0x4008172a:0x3ffb6c40 0x40085899:0x3ffb6c60 0x4008acda:0x3ffb6c80 0x40087f67:0x3ffb6cf0
+0x4008172a: panic_abort at /Users/ulissesmaffa/esp/esp-idf/components/esp_system/panic.c:451
+
+0x40085899: esp_system_abort at /Users/ulissesmaffa/esp/esp-idf/components/esp_system/port/esp_system_chip.c:84
+
+0x4008acda: abort at /Users/ulissesmaffa/esp/esp-idf/components/newlib/abort.c:38
+
+0x40087f67: vPortTaskWrapper at /Users/ulissesmaffa/esp/esp-idf/components/freertos/FreeRTOS-Kernel/portable/xtensa/port.c:166
+
+
+
+
+
+ELF file SHA256: 482d7c4a931a6d55
+
+Rebooting...
+ets Jun  8 2016 00:22:57
+
+rst:0xc (SW_CPU_RESET),boot:0x13 (SPI_FAST_FLASH_BOOT)
+configsip: 0, SPIWP:0xee
+clk_drv:0x00,q_drv:0x00,d_drv:0x00,cs0_drv:0x00,hd_drv:0x00,wp_drv:0x00
+mode:DIO, clock div:2
+load:0x3fff0030,len:7096
+load:0x40078000,len:15624
+load:0x40080400,len:4
+0x40080400: _init at ??:?
+
+load:0x40080404,len:3872
+entry 0x40080648
+I (29) boot: ESP-IDF v5.2-dev-132-gef64e4e5b3 2nd stage bootloader
+I (29) boot: compile time Feb 12 2024 09:39:52
+I (31) boot: Multicore bootloader
+I (35) boot: chip revision: v1.0
+I (39) boot.esp32: SPI Speed      : 40MHz
+I (43) boot.esp32: SPI Mode       : DIO
+I (48) boot.esp32: SPI Flash Size : 2MB
+I (52) boot: Enabling RNG early entropy source...
+I (58) boot: Partition Table:
+I (61) boot: ## Label            Usage          Type ST Offset   Length
+I (69) boot:  0 nvs              WiFi data        01 02 00009000 00006000
+I (76) boot:  1 phy_init         RF data          01 01 0000f000 00001000
+I (84) boot:  2 factory          factory app      00 00 00010000 00100000
+I (91) boot: End of partition table
+I (95) esp_image: segment 0: paddr=00010020 vaddr=3f400020 size=0a0a8h ( 41128) map
+I (119) esp_image: segment 1: paddr=0001a0d0 vaddr=3ffb0000 size=02158h (  8536) load
+I (122) esp_image: segment 2: paddr=0001c230 vaddr=40080000 size=03de8h ( 15848) load
+I (131) esp_image: segment 3: paddr=00020020 vaddr=400d0020 size=16410h ( 91152) map
+I (166) esp_image: segment 4: paddr=00036438 vaddr=40083de8 size=08370h ( 33648) load
+I (186) boot: Loaded app from partition at offset 0x10000
+I (186) boot: Disabling RNG early entropy source...
+I (198) cpu_start: Multicore app
+I (198) cpu_start: Pro cpu up.
+I (198) cpu_start: Starting app cpu, entry point is 0x40081108
+0x40081108: call_start_cpu1 at /Users/ulissesmaffa/esp/esp-idf/components/esp_system/port/cpu_start.c:159
+
+I (187) cpu_start: App cpu up.
+I (216) cpu_start: Pro cpu start user code
+I (216) cpu_start: cpu freq: 160000000 Hz
+I (216) cpu_start: Application information:
+I (221) cpu_start: Project name:     agronet2
+I (226) cpu_start: App version:      1
+I (231) cpu_start: Compile time:     Feb 12 2024 10:17:49
+I (237) cpu_start: ELF file SHA256:  482d7c4a931a6d55...
+I (243) cpu_start: ESP-IDF:          v5.2-dev-132-gef64e4e5b3
+I (249) cpu_start: Min chip rev:     v0.0
+I (254) cpu_start: Max chip rev:     v3.99 
+I (259) cpu_start: Chip rev:         v1.0
+I (264) heap_init: Initializing. RAM available for dynamic allocation:
+I (271) heap_init: At 3FFAE6E0 len 00001920 (6 KiB): DRAM
+I (277) heap_init: At 3FFB29F0 len 0002D610 (181 KiB): DRAM
+I (283) heap_init: At 3FFE0440 len 00003AE0 (14 KiB): D/IRAM
+I (289) heap_init: At 3FFE4350 len 0001BCB0 (111 KiB): D/IRAM
+I (296) heap_init: At 4008C158 len 00013EA8 (79 KiB): IRAM
+I (303) spi_flash: detected chip: generic
+I (306) spi_flash: flash io: dio
+W (310) spi_flash: Detected size(4096k) larger than the size in the binary image header(2048k). Using the size in the binary image header.
+W (324) pcnt(legacy): legacy driver is deprecated, please migrate to `driver/pulse_cnt.h`
+W (332) timer_group: legacy driver is deprecated, please migrate to `driver/gptimer.h`
+I (341) app_start: Starting scheduler on CPU0
+I (346) app_start: Starting scheduler on CPU1
+I (346) main_task: Started on CPU0
+I (356) main_task: Calling app_main()
+I (356) main_task: Returned from app_main()
+E (366) FreeRTOS: FreeRTOS Task "temp_task" should not return, Aborting now!
+
+abort() was called at PC 0x40087f67 on core 0
+0x40087f67: vPortTaskWrapper at /Users/ulissesmaffa/esp/esp-idf/components/freertos/FreeRTOS-Kernel/portable/xtensa/port.c:166
+
+
+
+Backtrace: 0x4008172a:0x3ffb6c40 0x40085899:0x3ffb6c60 0x4008acda:0x3ffb6c80 0x40087f67:0x3ffb6cf0
+0x4008172a: panic_abort at /Users/ulissesmaffa/esp/esp-idf/components/esp_system/panic.c:451
+
+0x40085899: esp_system_abort at /Users/ulissesmaffa/esp/esp-idf/components/esp_system/port/esp_system_chip.c:84
+
+0x4008acda: abort at /Users/ulissesmaffa/esp/esp-idf/components/newlib/abort.c:38
+
+0x40087f67: vPortTaskWrapper at /Users/ulissesmaffa/esp/esp-idf/components/freertos/FreeRTOS-Kernel/portable/xtensa/port.c:166
+
+
+
+
+
+ELF file SHA256: 482d7c4a931a6d55
+
+Rebooting...
+ets Jun  8 2016 00:22:57
+
+rst:0xc (SW_CPU_RESET),boot:0x13 (SPI_FAST_FLASH_BOOT)
+configsip: 0, SPIWP:0xee
+clk_drv:0x00,q_drv:0x00,d_drv:0x00,cs0_drv:0x00,hd_drv:0x00,wp_drv:0x00
+mode:DIO, clock div:2
+load:0x3fff0030,len:7096
+load:0x40078000,len:15624
+load:0x40080400,len:4
+0x40080400: _init at ??:?
+
+load:0x40080404,len:3872
+entry 0x40080648
+I (29) boot: ESP-IDF v5.2-dev-132-gef64e4e5b3 2nd stage bootloader
+I (29) boot: compile time Feb 12 2024 09:39:52
+I (31) boot: Multicore bootloader
+I (35) boot: chip revision: v1.0
+I (39) boot.esp32: SPI Speed      : 40MHz
+I (43) boot.esp32: SPI Mode       : DIO
+I (48) boot.esp32: SPI Flash Size : 2MB
+I (52) boot: Enabling RNG early entropy source...
+I (58) boot: Partition Table:
+I (61) boot: ## Label            Usage          Type ST Offset   Length
+I (69) boot:  0 nvs              WiFi data        01 02 00009000 00006000
+I (76) boot:  1 phy_init         RF data          01 01 0000f000 00001000
+I (84) boot:  2 factory          factory app      00 00 00010000 00100000
+I (91) boot: End of partition table
+I (95) esp_image: segment 0: paddr=00010020 vaddr=3f400020 size=0a0a8h ( 41128) map
+I (119) esp_image: segment 1: paddr=0001a0d0 vaddr=3ffb0000 size=02158h (  8536) load
+I (122) esp_image: segment 2: paddr=0001c230 vaddr=40080000 size=03de8h ( 15848) load
+I (131) esp_image: segment 3: paddr=00020020 vaddr=400d0020 size=16410h ( 91152) map
+I (166) esp_image: segment 4: paddr=00036438 vaddr=40083de8 size=08370h ( 33648) load
+I (186) boot: Loaded app from partition at offset 0x10000
+I (186) boot: Disabling RNG early entropy source...
+I (198) cpu_start: Multicore app
+I (198) cpu_start: Pro cpu up.
+I (198) cpu_start: Starting app cpu, entry point is 0x40081108
+0x40081108: call_start_cpu1 at /Users/ulissesmaffa/esp/esp-idf/components/esp_system/port/cpu_start.c:159
+
+I (187) cpu_start: App cpu up.
+I (216) cpu_start: Pro cpu start user code
+I (216) cpu_start: cpu freq: 160000000 Hz
+I (216) cpu_start: Application information:
+I (221) cpu_start: Project name:     agronet2
+I (226) cpu_start: App version:      1
+I (231) cpu_start: Compile time:     Feb 12 2024 10:17:49
+I (237) cpu_start: ELF file SHA256:  482d7c4a931a6d55...
+I (243) cpu_start: ESP-IDF:          v5.2-dev-132-gef64e4e5b3
+I (249) cpu_start: Min chip rev:     v0.0
+I (254) cpu_start: Max chip rev:     v3.99 
+I (259) cpu_start: Chip rev:         v1.0
+I (264) heap_init: Initializing. RAM available for dynamic allocation:
+I (271) heap_init: At 3FFAE6E0 len 00001920 (6 KiB): DRAM
+I (277) heap_init: At 3FFB29F0 len 0002D610 (181 KiB): DRAM
+I (283) heap_init: At 3FFE0440 len 00003AE0 (14 KiB): D/IRAM
+I (289) heap_init: At 3FFE4350 len 0001BCB0 (111 KiB): D/IRAM
+I (296) heap_init: At 4008C158 len 00013EA8 (79 KiB): IRAM
+I (303) spi_flash: detected chip: generic
+I (306) spi_flash: flash io: dio
+W (310) spi_flash: Detected size(4096k) larger than the size in the binary image header(2048k). Using the size in the binary image header.
+W (324) pcnt(legacy): legacy driver is deprecated, please migrate to `driver/pulse_cnt.h`
+W (332) timer_group: legacy driver is deprecated, please migrate to `driver/gptimer.h`
+I (341) app_start: Starting scheduler on CPU0
+I (346) app_start: Starting scheduler on CPU1
+I (346) main_task: Started on CPU0
+I (356) main_task: Calling app_main()
+I (356) main_task: Returned from app_main()
+E (366) FreeRTOS: FreeRTOS Task "temp_task" should not return, Aborting now!
+
+abort() was called at PC 0x40087f67 on core 0
+0x40087f67: vPortTaskWrapper at /Users/ulissesmaffa/esp/esp-idf/components/freertos/FreeRTOS-Kernel/portable/xtensa/port.c:166
+
+
+
+Backtrace: 0x4008172a:0x3ffb6c40 0x40085899:0x3ffb6c60 0x4008acda:0x3ffb6c80 0x40087f67:0x3ffb6cf0
+0x4008172a: panic_abort at /Users/ulissesmaffa/esp/esp-idf/components/esp_system/panic.c:451
+
+0x40085899: esp_system_abort at /Users/ulissesmaffa/esp/esp-idf/components/esp_system/port/esp_system_chip.c:84
+
+0x4008acda: abort at /Users/ulissesmaffa/esp/esp-idf/components/newlib/abort.c:38
+
+0x40087f67: vPortTaskWrapper at /Users/ulissesmaffa/esp/esp-idf/components/freertos/FreeRTOS-Kernel/portable/xtensa/port.c:166
+
+
+
+
+
+ELF file SHA256: 482d7c4a931a6d55
+
+Rebooting...
+ets Jun  8 2016 00:22:57
+
+rst:0xc (SW_CPU_RESET),boot:0x13 (SPI_FAST_FLASH_BOOT)
+configsip: 0, SPIWP:0xee
+clk_drv:0x00,q_drv:0x00,d_drv:0x00,cs0_drv:0x00,hd_drv:0x00,wp_drv:0x00
+mode:DIO, clock div:2
+load:0x3fff0030,len:7096
+load:0x40078000,len:15624
+load:0x40080400,len:4
+0x40080400: _init at ??:?
+
+load:0x40080404,len:3872
+entry 0x40080648
+I (29) boot: ESP-IDF v5.2-dev-132-gef64e4e5b3 2nd stage bootloader
+I (29) boot: compile time Feb 12 2024 09:39:52
+I (31) boot: Multicore bootloader
+I (35) boot: chip revision: v1.0
+I (39) boot.esp32: SPI Speed      : 40MHz
+I (43) boot.esp32: SPI Mode       : DIO
+I (48) boot.esp32: SPI Flash Size : 2MB
+I (52) boot: Enabling RNG early entropy source...
+I (58) boot: Partition Table:
+I (61) boot: ## Label            Usage          Type ST Offset   Length
+I (69) boot:  0 nvs              WiFi data        01 02 00009000 00006000
+I (76) boot:  1 phy_init         RF data          01 01 0000f000 00001000
+I (84) boot:  2 factory          factory app      00 00 00010000 00100000
+I (91) boot: End of partition table
+I (95) esp_image: segment 0: paddr=00010020 vaddr=3f400020 size=0a0a8h ( 41128) map
+I (119) esp_image: segment 1: paddr=0001a0d0 vaddr=3ffb0000 size=02158h (  8536) load
+I (122) esp_image: segment 2: paddr=0001c230 vaddr=40080000 size=03de8h ( 15848) load
+I (131) esp_image: segment 3: paddr=00020020 vaddr=400d0020 size=16410h ( 91152) map
+I (166) esp_image: segment 4: paddr=00036438 vaddr=40083de8 size=08370h ( 33648) load
+I (186) boot: Loaded app from partition at offset 0x10000
+I (186) boot: Disabling RNG early entropy source...
+I (198) cpu_start: Multicore app
+I (198) cpu_start: Pro cpu up.
+I (198) cpu_start: Starting app cpu, entry point is 0x40081108
+0x40081108: call_start_cpu1 at /Users/ulissesmaffa/esp/esp-idf/components/esp_system/port/cpu_start.c:159
+
+I (187) cpu_start: App cpu up.
+I (216) cpu_start: Pro cpu start user code
+I (216) cpu_start: cpu freq: 160000000 Hz
+I (216) cpu_start: Application information:
+I (221) cpu_start: Project name:     agronet2
+I (226) cpu_start: App version:      1
+I (231) cpu_start: Compile time:     Feb 12 2024 10:17:49
+I (237) cpu_start: ELF file SHA256:  482d7c4a931a6d55...
+I (243) cpu_start: ESP-IDF:          v5.2-dev-132-gef64e4e5b3
+I (249) cpu_start: Min chip rev:     v0.0
+I (254) cpu_start: Max chip rev:     v3.99 
+I (259) cpu_start: Chip rev:         v1.0
+I (264) heap_init: Initializing. RAM available for dynamic allocation:
+I (271) heap_init: At 3FFAE6E0 len 00001920 (6 KiB): DRAM
+I (277) heap_init: At 3FFB29F0 len 0002D610 (181 KiB): DRAM
+I (283) heap_init: At 3FFE0440 len 00003AE0 (14 KiB): D/IRAM
+I (289) heap_init: At 3FFE4350 len 0001BCB0 (111 KiB): D/IRAM
+I (296) heap_init: At 4008C158 len 00013EA8 (79 KiB): IRAM
+I (303) spi_flash: detected chip: generic
+I (306) spi_flash: flash io: dio
+W (310) spi_flash: Detected size(4096k) larger than the size in the binary image header(2048k). Using the size in the binary image header.
+W (324) pcnt(legacy): legacy driver is deprecated, please migrate to `driver/pulse_cnt.h`
+W (332) timer_group: legacy driver is deprecated, please migrate to `driver/gptimer.h`
+I (341) app_start: Starting scheduler on CPU0
+I (346) app_start: Starting scheduler on CPU1
+I (346) main_task: Started on CPU0
+I (356) main_task: Calling app_main()
+I (356) main_task: Returned from app_main()
+E (366) FreeRTOS: FreeRTOS Task "temp_task" should not return, Aborting now!
+
+abort() was called at PC 0x40087f67 on core 0
+0x40087f67: vPortTaskWrapper at /Users/ulissesmaffa/esp/esp-idf/components/freertos/FreeRTOS-Kernel/portable/xtensa/port.c:166
+
+
+
+Backtrace: 0x4008172a:0x3ffb6c40 0x40085899:0x3ffb6c60 0x4008acda:0x3ffb6c80 0x40087f67:0x3ffb6cf0
+0x4008172a: panic_abort at /Users/ulissesmaffa/esp/esp-idf/components/esp_system/panic.c:451
+
+0x40085899: esp_system_abort at /Users/ulissesmaffa/esp/esp-idf/components/esp_system/port/esp_system_chip.c:84
+
+0x4008acda: abort at /Users/ulissesmaffa/esp/esp-idf/components/newlib/abort.c:38
+
+0x40087f67: vPortTaskWrapper at /Users/ulissesmaffa/esp/esp-idf/components/freertos/FreeRTOS-Kernel/portable/xtensa/port.c:166
+
+
+
+
+
+ELF file SHA256: 482d7c4a931a6d55
+
+Rebooting...
+ets Jun  8 2016 00:22:57
+
+rst:0xc (SW_CPU_RESET),boot:0x13 (SPI_FAST_FLASH_BOOT)
+configsip: 0, SPIWP:0xee
