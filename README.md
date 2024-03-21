@@ -19,7 +19,7 @@ Agronet introduz um sistema de configuração altamente modular que não apenas 
 
 ## Componentes
 
-## Sensores de temperatura
+### Sensores de temperatura
 
 | Componente | Descrição                                         | Licença      | Chips Suportados                    |
 |------------|---------------------------------------------------|--------------|-------------------------------------|
