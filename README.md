@@ -33,4 +33,5 @@ Agronet introduz um sistema de configuração altamente modular que não apenas 
 ## Mantenedores de biblioteca
 
 - [Ulisses Maffazioli](https://github.com/ulissesmaffa)
+- [Mathues Araujo]()
 
