@@ -23,12 +23,12 @@ Agronet introduz um sistema de configuração altamente modular que não apenas 
 
 | Componente | Descrição                                         | Licença      | Chips Suportados                    |
 |------------|---------------------------------------------------|--------------|-------------------------------------|
-| **ntc_20k**| Driver para sensor de temperatura NTC de 20kΩ, que associa uma resistência de 20kΩ a uma temperatura ambiente de 25°C. | (Sua Licença) | esp32, esp8266, esp32s2, esp32c3 |
+| **ntc_20k**| Driver para sensor de temperatura NTC de 20kΩ, que associa uma resistência de 20kΩ a uma temperatura ambiente de 25°C. | --- | esp32 |
 
 ## Documentação
 
-- [Documentation]()
-- [Frequently asked questions](FAQ.md)
+- [Documentação]()
+- [Perguntas Frequentes](FAQ.md)
 
 ## Mantenedores de biblioteca
 
