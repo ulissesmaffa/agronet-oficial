@@ -20,6 +20,13 @@
 #define BTN_PIN 34 
 #define PCNT_THRESH 20000 // Limite para contagem de bordas ascendentes
 
+
+#define CONTROL_BTN_IN_MOSFET 33 //controle de MOSFET P sinal de entrada
+#define CONTROL_BTN_OUT_MOSFET 26 //controle de MOSFET P sinal de saída
+
+// #define CONTROL_BTN_IN_RESET 32 
+// #define CONTROL_BTN_OUT_RESET  
+
 typedef struct {
     int i;
     uint64_t timer_counter_value;
@@ -47,6 +54,19 @@ void config_btn(){
     ESP_LOGI("CONFIG_BTN", "Configurando botão | BTN_PIN = %i",BTN_PIN);
     esp_rom_gpio_pad_select_gpio(BTN_PIN); 
     gpio_set_direction(BTN_PIN, GPIO_MODE_INPUT);
+}
+
+/*
+Configuração Controle MOSFET (IN/OUT)
+*/
+void config_control_mosfet(){
+    ESP_LOGI("CONFIG_CONTROL_MOSFET", "Configurando controle mosfet in| CONTROL_BTN_IN_MOSFET = %i",CONTROL_BTN_IN_MOSFET);
+    esp_rom_gpio_pad_select_gpio(CONTROL_BTN_IN_MOSFET); 
+    gpio_set_direction(CONTROL_BTN_IN_MOSFET, GPIO_MODE_INPUT);
+
+    ESP_LOGI("CONFIG_CONTROL_MOSFET", "Configurando controle mosfet out| CONTROL_BTN_OUT_MOSFET = %i",CONTROL_BTN_OUT_MOSFET);
+    esp_rom_gpio_pad_select_gpio(CONTROL_BTN_OUT_MOSFET); 
+    gpio_set_direction(CONTROL_BTN_OUT_MOSFET, GPIO_MODE_OUTPUT);
 }
 
 /*
@@ -103,6 +123,7 @@ void config_timer(int timer_idx){
     timer_isr_register(TIMER_GROUP_0, timer_idx, timer_group0_isr, (void *) timer_idx, ESP_INTR_FLAG_IRAM, NULL);
 }
 
+//Essas esquações devem vir de arquivo
 double calc_temp(double freq){
     double temp;
 
@@ -167,6 +188,8 @@ void temp_task(void *arg){
     bool btn_status=false;
     bool last_btn_status=false;
 
+    bool ctr_mosfet_in_status=false;
+
     while(1){
         btn_status = gpio_get_level(BTN_PIN);
         if(last_btn_status && !btn_status) {
@@ -178,12 +201,25 @@ void temp_task(void *arg){
         }
         last_btn_status = btn_status;
         vTaskDelay(10/portTICK_PERIOD_MS);
+
+        ctr_mosfet_in_status = gpio_get_level(CONTROL_BTN_IN_MOSFET);
+        if (ctr_mosfet_in_status){
+            gpio_set_level(LED_PIN,1);
+            gpio_set_level(CONTROL_BTN_OUT_MOSFET,1);
+        }else{
+            gpio_set_level(LED_PIN,0);
+            gpio_set_level(CONTROL_BTN_OUT_MOSFET,0);
+        }
+
     }
 }
 
 void app_main(void) {
     config_led();
     config_btn();
+
+    config_control_mosfet();
+
     config_pcnt();
     reset_pcnt();
     config_timer(TIMER_0);
