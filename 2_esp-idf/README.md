@@ -1,0 +1,1 @@
+Firmware com melhorias em coleta de dados e sensoriamento. Rodando apenas em ESP-IDF

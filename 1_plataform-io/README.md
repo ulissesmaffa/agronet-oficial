@@ -1,0 +1,1 @@
+Projeto completo com firmware do sensor modificado e LoRa.
