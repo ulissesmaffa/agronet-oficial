@@ -444,8 +444,6 @@ double calc_temp(double freq){
 /* Tarefa principal do sensor */
 void vReadTmpSnsrLoop(void *pvParameters)
 {
-  sensorReadings srReading;
-
   //Essas variáveis, estão sendo controladas fisicamente, devem ser alteradas, para serem controladas por software.
   bool btn_status=false;
   bool last_btn_status=false;
@@ -478,6 +476,8 @@ void vReadTmpSnsrLoop(void *pvParameters)
 
 /* Task para verificar fila de interrupção de timer */
 void timer_evt_task(void *arg){
+    sensorReadings srReading;
+
     timer_event_t evt;
     while(1){
         if(xQueueReceive(timer_queue, &evt, portMAX_DELAY)){
@@ -488,6 +488,23 @@ void timer_evt_task(void *arg){
             printf("Edges: %.2f edges\n",(double) evt.counter_edges);
             printf("Freq:  %.2f Hz\n",freq);
             printf("Temp:  %.2f ºC\n",temp);
+
+            printf("Realizando leitura do sensor\n");
+            srReading.dtRead = time(NULL);
+            strcpy(srReading.sensor, "TEMP");
+            srReading.value = (unsigned char)(temp);
+            srReading.idSensor = 1; //colocar o id do sensor
+            srReading.bSent = false;
+            srReading.bAck = false;
+            Serial.print("time:");
+            Serial.println(srReading.dtRead);
+            if (xSemaphoreTake(semReadingsQueue, (TickType_t)10) == pdTRUE)
+            {
+              vsrReadingsQueue.push(srReading);
+              bHasData = true;
+              xSemaphoreGive(semReadingsQueue);
+            }
+
         }
     }
 }
