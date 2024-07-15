@@ -1,61 +1,41 @@
-/* includes */
+/* includes LoRa*/
 #include "AgroNet.h"
 #include "LoraModule.h"
-
 #include "esp32-hal-timer.h"
-//======================================
-// Para trabalhar com sistema de arquivos
-#include "esp_spiffs.h"
-#include "esp_err.h"
-#include <string.h>
-//======================================
 
-/* definições de constantes */
+/* Includes sensor*/
+#include "driver/pcnt.h"
+#include "esp_timer.h"
+#include "esp_attr.h"
+
+/* definições de constantes LoRa*/
 #define AIR_DATA_RATE AIR_DATA_RATE_000_03
 #define SENSOR_PERIOD 300        /* valor em minutos */
 #define SENDER_PERIOD_DEFAULT 50 /* valor em minutos */
 #define SENDER_PERIOD_WAIT 100   /* valor em minutos */
 #define main_route_max_tries 10
 
-#define LED_PIN 2
-// #define BOTAO_PIN 0
+/* Definições de constantes sensor*/
+#define PCNT_INPUT_SIG_IO 35 // GPIO para o sinal de entrada
+#define PCNT_THRESH 20000 // Limite para contagem de bordas ascendentes
+#define LED_PIN 2  // LED interno da ESP32
+#define TIMER_DIVIDER 80 // 80/80 = 1MHz -> incremento a cada 1ms
+#define TIMER_SCALE (80000000/TIMER_DIVIDER)
 
-#define TEMP_PIN_1 34
-#define TEMP_PIN_2 35
-#define TEMP_PIN_3 32
+#define BTN_PIN 34 //controle da chamada do sensor
+#define CONTROL_BTN_IN_MOSFET 33 //controle de MOSFET P sinal de entrada
+#define CONTROL_BTN_OUT_MOSFET 26 //controle de MOSFET P sinal de saída
 
-#define BUFFER_SIZE 200
-#define BUFFER_SIZE2 500
-#define AMOSTRAGEM_US 50
-#define AMOSTRAS 5000
-
-esp_timer_handle_t timer1Handle;
-QueueHandle_t signalQueue;   // amostragem parte 1: fila para contagem de 1 e 0
-QueueHandle_t sequenceQueue; // amostragem parte 2: fila para agrupamento de 1 e 0
-
-// Variáveis
-volatile int sampleIndex = 0;
-int c0 = 0, c1 = 0, sig, tempPin = TEMP_PIN_1, ctrTempPin = 0;
-float dc = 0.0;
-volatile bool start = true;
-
-typedef struct
-{
-  int value; // 0 or 1
-  int count; // Count of 0s or 1s
-} SignalData_t;
-
-/* definições para a comunicação serial */
+/* definições para a comunicação serial LoRa*/
 HardwareSerial mySerial(1);                                                                             // RX, TX
 LoRa_E32 e32Serial(TX_PIN, RX_PIN, &mySerial, AUX_PIN, M0_PIN, M1_PIN, UART_BPS_RATE_9600, SERIAL_8N1); // Criação do objeto SoftwareSerial
 
-/* definição das variaveis compartilhadas */
+/* definição das variaveis compartilhadas LoRa*/
 SemaphoreHandle_t semFlags;
 SemaphoreHandle_t semReadingsQueue;
 TaskHandle_t thReceive, thReadSensor, thSendData;
 std::queue<sensorReadings> vsrReadingsQueue;
 std::list<loraEntity *>::iterator it;
-
 bool bHasData;
 int iSenderPeriod = SENDER_PERIOD_DEFAULT;
 int iSenderPeriodWait = SENDER_PERIOD_WAIT;
@@ -63,22 +43,42 @@ int main_route_tries = 0;
 int forward_routes_number = 0;
 timeval tv;
 
+/* Variáveis e estruturas de dados Sensor*/
+typedef struct {
+    int i;
+    uint64_t timer_counter_value;
+    int16_t counter_edges;
+} timer_event_t;
+
+volatile int counter_index=0;
+timer_event_t evt;
+QueueHandle_t timer_queue;
+
+// Variáveis para o timer high resolution
+static esp_timer_handle_t timer0;
+static int64_t start_time = 0;
+
+/* funções comunicação LoRa e gerenciamento geral do sistema*/
 void vGetConfigurations();
 void IRAM_ATTR vOnReceive();
 void vReceiveLoop(void *pvParameters);
-void vReadTmpSnsrLoop(void *pvParameters);
 void vSendDataLoop(void *pvParameters);
 void vHandleACK(defaultMsg dmMsg);
 void vHandleRet(defaultMsg dmMsg);
-float calcFrequency();
-int getPinTemp();
-void clearQueue(QueueHandle_t queue);
-void printQueueContents();
-void signalProcessingTask(void *pvParameters);
-void timerTrigger1(void *arg);
 
-/* implementação das funções */
+/* Funções Sensor*/
+void config_pcnt();
+void reset_pcnt();
+void config_led();
+void config_timer();
+void IRAM_ATTR timer_callback(void* arg);
+void timer_evt_task(void *arg);
+double calc_temp(double freq);
+void vReadTmpSnsrLoop(void *pvParameters);
+void timer_evt_task(void *arg);
+void coleta_dados();
 
+/* implementação das funções LoRa e gerenciamento geral do sistema*/
 void setup()
 {
   semFlags = xSemaphoreCreateMutex();
@@ -135,46 +135,24 @@ void setup()
   vPrintParameters(configuration);
 
   c.close();
-  // e32Serial.setMode(MODE_0_NORMAL);
 
   /* configuração da interrupção de recebimento de dados */
   pinMode(AUX_PIN, INPUT_PULLUP);
   attachInterrupt(AUX_PIN, vOnReceive, RISING);
 
-  // Configuração do led interno
-  pinMode(LED_PIN, OUTPUT);
-  // Configuração do pino que recebe o sinal do sensor
-  pinMode(TEMP_PIN_1, INPUT);
-  pinMode(TEMP_PIN_2, INPUT);
-  pinMode(TEMP_PIN_3, INPUT);
-  // Configuração do timer
-  const esp_timer_create_args_t timer1Conf = {
-      .callback = timerTrigger1,
-      .name = "Timer1",
-  };
-  esp_timer_create(&timer1Conf, &timer1Handle);
-  esp_timer_start_periodic(timer1Handle, AMOSTRAGEM_US);
-  // Cria a fila amostragem 1
-  signalQueue = xQueueCreate(BUFFER_SIZE, sizeof(int));
-  if (signalQueue == NULL)
-  {
-    printf("\nFalha ao criar fila.");
-    return;
-  }
+  /* Configuração sensor */
+  config_led();
+  config_pcnt();
+  reset_pcnt();
+  config_timer();
+  timer_queue = xQueueCreate(10, sizeof(timer_event_t));
 
   xTaskCreate(vReceiveLoop, "receiveLoop", 2048, NULL, 1, &thReceive);
-  xTaskCreate(vReadTmpSnsrLoop, "ReadTmpSnsrLoop", 2048, NULL, 1, &thReadSensor);
   xTaskCreate(vSendDataLoop, "SendDataLoop", 2048, NULL, 1, &thSendData);
-  // Cria a tarefa de processamento de sinal
-  xTaskCreate(signalProcessingTask, "signalProcessingTask", 2048, NULL, 5, NULL);
 
-  // Cria a fila amostragem 2
-  sequenceQueue = xQueueCreate(BUFFER_SIZE2, sizeof(SignalData_t));
-  if (sequenceQueue == NULL)
-  {
-    printf("\nFalha ao criar fila.");
-    return;
-  }
+  /* Tarefas do sensor  */
+   xTaskCreate(vReadTmpSnsrLoop, "ReadTmpSnsrLoop", 2048, NULL, 1, &thReadSensor);
+   xTaskCreate(timer_evt_task, "timer_evt_task", 2048, NULL, 5, NULL);
 }
 
 /* loop desativado pois o freertos executa por threads */
@@ -293,81 +271,6 @@ void vHandleACK(defaultMsg dmMsg)
   }
 }
 
-void vReadTmpSnsrLoop(void *pvParameters)
-{
-  sensorReadings srReading;
-  float aux;
-  // int count = 500;
-  while (1)
-  {
-    vTaskDelay(10000 / portTICK_PERIOD_MS); // Espera por 10
-    printf("Realizando leitura do sensor\n");
-    int loop = 0;
-    while (loop <= 3)
-    { // Coleta a temperatura dos 3 sensores 3 vezes, por isso o loop roda 9 vezes.
-      if (start)
-      { // Iniciar o timer somente se start for true
-        srReading.dtRead = time(NULL);
-        strcpy(srReading.sensor, "TEMP");
-        aux = calcFrequency();
-        Serial.println(aux);
-        if(aux == NULL){
-          printf("leitura nula\n");
-          break;
-        }
-        srReading.value = aux;
-        srReading.idSensor = (ctrTempPin + 1);
-        clearQueue(sequenceQueue);
-        start = false;
-        // tempPin = getPinTemp(); // Modificação para coletar informação de 3 sensores
-        tempPin = TEMP_PIN_1; //ajuste Ulisses e Matheus 20/01/24
-        digitalWrite(LED_PIN, HIGH);
-        // esp_timer_start_periodic(timer1Handle, AMOSTRAGEM_US);
-        srReading.bSent = false;
-        srReading.bAck = false;
-        if (xSemaphoreTake(semReadingsQueue, (TickType_t)10) == pdTRUE)
-        {
-          vsrReadingsQueue.push(srReading);
-          bHasData = true;
-          xSemaphoreGive(semReadingsQueue);
-        }
-      }
-      // vTaskDelay(10000 / portTICK_PERIOD_MS); // Espera por 10 segundos
-      vTaskDelay(10000 / portTICK_PERIOD_MS); // Espera por 10 segundos
-      loop++;
-    }
-
-    vTaskDelay(SENSOR_PERIOD / portTICK_PERIOD_MS); // Espera por 1h
-  }
-  // while (1)
-  // {
-  //   for (int i = 0; i < 3; i++)
-  //   {
-  //     printf("Realizando leitura do sensor\n");
-  //     srReading.dtRead = time(NULL);
-  //     strcpy(srReading.sensor, "TEMP");
-  //     srReading.value = (unsigned char)(count + i * 5);
-  //     srReading.idSensor = (i + 1);
-  //     srReading.bSent = false;
-  //     srReading.bAck = false;
-  //     Serial.print("time:");
-  //     Serial.println(srReading.dtRead);
-  //     if (xSemaphoreTake(semReadingsQueue, (TickType_t)10) == pdTRUE)
-  //     {
-  //       vsrReadingsQueue.push(srReading);
-  //       bHasData = true;
-  //       xSemaphoreGive(semReadingsQueue);
-  //     }
-  //   }
-  //   count = count + 10;
-  //   if (count > 700)
-  //   {
-  //     count = 500;
-  //   };
-  //   vTaskDelay((SENSOR_PERIOD * 1000) / portTICK_PERIOD_MS);
-  // }
-}
-
 void vSendDataLoop(void *pvParameters)
 {
   sensorReadings srReading;
@@ -463,181 +366,159 @@ void vSendDataLoop(void *pvParameters)
 
 //===============================================================================================
 
-void timerTrigger1(void *arg)
+/* Configuração de PCNT */
+void config_pcnt()
 {
-  if (sampleIndex < AMOSTRAS)
-  {
-    sig = digitalRead(tempPin);
-    BaseType_t xHigherPriorityTaskWoken = pdFALSE;
-    if (xQueueSendFromISR(signalQueue, (void *)&sig, &xHigherPriorityTaskWoken) != pdPASS)
-    {
-      printf("\nFalha ao adicionar à fila! Overflow?");
-    }
-    sampleIndex++;
-  }
-  else
-  {
-    sampleIndex = 0;
-    dc = ((float)c1 / (c1 + c0)) * 100;
-    c0 = 0;
-    c1 = 0;
-    start = true;
+    pcnt_config_t config = {
+        .pulse_gpio_num = PCNT_INPUT_SIG_IO,
+        .pos_mode = PCNT_COUNT_INC,
+        .neg_mode = PCNT_COUNT_DIS,
+        .counter_h_lim = PCNT_THRESH,
+        .unit = PCNT_UNIT_0,
+        .channel = PCNT_CHANNEL_0,
+    };
+    pcnt_unit_config(&config); // Inicializar o PCNT
+    /* Configure and enable the input filter */
+    pcnt_set_filter_value(PCNT_UNIT_0, 100);
+    pcnt_filter_enable(PCNT_UNIT_0);
+}
+
+/* Resetar o contador de bordas ascendetes */
+void reset_pcnt()
+{
+    pcnt_counter_pause(PCNT_UNIT_0); // Pausa contador
+    pcnt_counter_clear(PCNT_UNIT_0); // Limpa contador
+}
+
+/* Configuração de LED INTERNO */
+void config_led()
+{
+  pinMode(LED_PIN, OUTPUT);
+}
+
+/* Configuração do timer high resolution */
+void config_timer()
+{
+   printf("Configurando timer0 para sensor\n");
+   const esp_timer_create_args_t timer0_config = {
+        .callback = &timer_callback,
+        .name = "timer0"
+    };
+    esp_timer_create(&timer0_config, &timer0); // Apenas cria o timer0
+}
+
+/* Interrupção do TIMER*/
+void IRAM_ATTR timer_callback(void* arg) {    
+    pcnt_get_counter_value(PCNT_UNIT_0, &evt.counter_edges);
+    evt.i=counter_index++;
+    evt.timer_counter_value = esp_timer_get_time() - start_time;
+    xQueueSendFromISR(timer_queue, &evt, NULL); // Coloca evento na fila
+    reset_pcnt(); // reseta pcnt
+    esp_timer_stop(timer0); // parar funcionamento do timer
     digitalWrite(LED_PIN, LOW);
-    esp_timer_stop(timer1Handle);
-  }
 }
 
-// Processamento do sinal
-void signalProcessingTask(void *pvParameters)
-{
-  int receivedSignal;
-  int currentSignal = -1; // Inicia com valor inválido
-  int currentCount = 0;
 
-  while (1)
-  {
-    if (xQueueReceive(signalQueue, &receivedSignal, portMAX_DELAY))
-    {
-      if (currentSignal == -1)
-      { // Primeira interação
-        currentSignal = receivedSignal;
-      }
-      // Verifica se o sinal mudou
-      if (currentSignal != receivedSignal)
-      {
-        SignalData_t data = {currentSignal, currentCount};
-        xQueueSend(sequenceQueue, &data, portMAX_DELAY); // Envia estrutura de dados para a segunda fila
-        // Reset
-        currentSignal = receivedSignal;
-        currentCount = 0;
-      }
-      // Incrementa contadores
-      currentCount++;
-      if (receivedSignal == 0)
-      {
-        c0++;
-      }
-      else
-      {
-        c1++;
-      }
-    }
-  }
-}
+/* Cáculo de temperatura a partir da frequencia coletada
+AJUSTE: ESSAS EQUAÇÕES DEVEM VIR DE UM ARQUIVO */
+double calc_temp(double freq){
+    double temp;
 
-void printQueueContents()
-{
-  SignalData_t data;
-  printf("\nInício da fila:");
-  while (xQueueReceive(sequenceQueue, &data, pdMS_TO_TICKS(20)))
-  { // 0 timeout, para não bloquear
-    // ESP_LOGI("Main", "[Value: %d, Count: %d]", data.value, data.count);
-  }
-  printf("\nFim da fila:");
-}
+    if(freq < 115){//Dados 1 - RMSE=1.15
+        temp =  freq*0.30-19.9; 
+    }else if(freq >= 115 && freq <= 180){//Dados 2 - RMSE=0.30
+        temp = freq*0.10+0.55; 
+    }else if(freq >180 && freq <=260){//Dados 3 - RMSE=0.29
+        temp = freq*0.09+4.231; 
+    }else if(freq >260 && freq <=440){//Dados 4 - RMSE=0.28
+        temp = freq*0.07+10.28;  
+    }else if(freq >440 && freq <=655){//Dados 5 - RMSE=0.14
+        temp = freq*0.04+20.21;  
+    }else{//Dados 6 - RMSE=0.34
+        temp =  freq*0.03+26.33;
+    }
 
-void clearQueue(QueueHandle_t queue)
-{
-  void *tempData;
-  while (xQueueReceive(queue, &tempData, 0) == pdTRUE)
-  {
-    // Faz nada, apenas retira o item da fila
-  }
-}
-
-float calcFrequency()
-{
-  SignalData_t currentData, nextData;
-  uint64_t totalPeriodUs = 0; // total de microssegundos
-  int numPeriods = 0;         // número de períodos completos
-  float temp = 0.0;           // Temperatura
-
-  printf("calcFrequency\n");
-  // Se não houver dados na fila, retorne
-  if (uxQueueMessagesWaiting(sequenceQueue) < 3)
-  { // Precisa de pelo menos 3 itens para ter "itens do meio"
-    // ESP_LOGE("calcFrequency", "Fila com menos de 3 itens.");
-    printf("[%lld] Fila com menos de 3 itens.", esp_timer_get_time());
-    return NULL;
-  }
-
-  // Ignore o primeiro elemento
-  xQueueReceive(sequenceQueue, &currentData, portMAX_DELAY);
-
-  while (uxQueueMessagesWaiting(sequenceQueue) > 1)
-  {
-    xQueueReceive(sequenceQueue, &nextData, portMAX_DELAY);
-    // Calcular período usando a contagem de 'currentData' e 'nextData'
-    // Isso assume que sua sequência é alternada entre 0s e 1s.
-    uint64_t periodUs = (currentData.count + nextData.count) * AMOSTRAGEM_US;
-    totalPeriodUs += periodUs;
-    numPeriods++;
-    // Prossiga para o próximo par
-    currentData = nextData;
-  }
-  // Ignore o último item (já que ele foi parcialmente usado no último período calculado)
-  xQueueReceive(sequenceQueue, &nextData, portMAX_DELAY);
-  if (numPeriods > 0)
-  {
-    uint64_t avgPeriodUs = totalPeriodUs / numPeriods;
-    float frequencyHz = 1000000.0 / avgPeriodUs; // convertendo período em frequência
-    int dados = 0;
-    if (frequencyHz < 115)
-    { // Dados 1 - RMSE=1.15
-      temp = frequencyHz * 0.30 - 19.9;
-      dados = 1;
-    }
-    else if (frequencyHz >= 115 && frequencyHz <= 180)
-    { // Dados 2 - RMSE=0.30
-      temp = frequencyHz * 0.10 + 0.55;
-      dados = 2;
-    }
-    else if (frequencyHz > 180 && frequencyHz <= 260)
-    { // Dados 3 - RMSE=0.29
-      temp = frequencyHz * 0.09 + 4.231;
-      dados = 3;
-    }
-    else if (frequencyHz > 260 && frequencyHz <= 440)
-    { // Dados 4 - RMSE=0.28
-      temp = frequencyHz * 0.07 + 10.28;
-      dados = 4;
-    }
-    else if (frequencyHz > 440 && frequencyHz <= 655)
-    { // Dados 5 - RMSE=0.14
-      temp = frequencyHz * 0.04 + 20.21;
-      dados = 5;
-    }
-    else
-    { // Dados 6 - RMSE=0.34
-      temp = frequencyHz * 0.03 + 26.33;
-      dados = 6;
-    }
-    printf("[%lld] Frequência calculada[%i]: %.2f Hz - DC: %.2fp.p - Dados: %i - Temp: %.2f", esp_timer_get_time(), tempPin, frequencyHz, dc, dados, temp);
     return temp;
-  }
-  else
-  {
-    printf("[%lld] Não foi possível calcular a frequência[%i].", esp_timer_get_time(), tempPin);
-  }
-  printf("nada por aqui\n");
-  return NULL;
 }
 
-int getPinTemp()
+/* Tarefa principal do sensor */
+void vReadTmpSnsrLoop(void *pvParameters)
 {
-  if (ctrTempPin == 0)
-  {
-    ctrTempPin++;
-    return TEMP_PIN_1;
+  sensorReadings srReading;
+
+  //Essas variáveis, estão sendo controladas fisicamente, devem ser alteradas, para serem controladas por software.
+  bool btn_status=false;
+  bool last_btn_status=false;
+  bool ctr_mosfet_in_status=false;
+
+  while(1){
+    // vTaskDelay(10000 / portTICK_PERIOD_MS); // Esse Delay não é necessário, está aqui apenas para teste
+    // coleta_dados();
+
+    /* Controle feito fisicamente, deve ser alterado para controle via software. Para teste, comentar essa parte e descomentar parte de cima */
+    //btn_status = gpio_get_level(BTN_PIN); //modo feito em IDF
+    btn_status = digitalRead(BTN_PIN);
+    if(last_btn_status && !btn_status) {
+      coleta_dados();
+    }
+    last_btn_status = btn_status;
+    vTaskDelay(10/portTICK_PERIOD_MS);
+
+    // ctr_mosfet_in_status = gpio_get_level(CONTROL_BTN_IN_MOSFET); //modo feito em IDF
+    ctr_mosfet_in_status= digitalRead(CONTROL_BTN_IN_MOSFET);
+    if (ctr_mosfet_in_status){
+      digitalWrite(LED_PIN, HIGH);
+      digitalWrite(CONTROL_BTN_OUT_MOSFET, HIGH);
+    }else{
+      digitalWrite(LED_PIN, LOW);
+      digitalWrite(CONTROL_BTN_OUT_MOSFET, LOW);
+    }
   }
-  else if (ctrTempPin == 1)
-  {
-    ctrTempPin++;
-    return TEMP_PIN_2;
-  }
-  else
-  {
-    ctrTempPin = 0;
-    return TEMP_PIN_3;
-  }
+}
+
+/* Task para verificar fila de interrupção de timer */
+void timer_evt_task(void *arg){
+    timer_event_t evt;
+    while(1){
+        if(xQueueReceive(timer_queue, &evt, portMAX_DELAY)){
+            double freq = ((double)evt.counter_edges * (double)TIMER_SCALE) / (double)evt.timer_counter_value;
+            double temp = calc_temp(freq);
+            printf("Event timer [%i]\n",evt.i);
+            printf("Time:  %.5f s\n",(double) evt.timer_counter_value / TIMER_SCALE);
+            printf("Edges: %.2f edges\n",(double) evt.counter_edges);
+            printf("Freq:  %.2f Hz\n",freq);
+            printf("Temp:  %.2f ºC\n",temp);
+        }
+    }
+}
+
+/* Configuração de BTN */
+void config_btn(){
+  pinMode(BTN_PIN, INPUT);
+  /* IDF VERSION */
+  // esp_rom_gpio_pad_select_gpio(BTN_PIN); 
+  // gpio_set_direction(BTN_PIN, GPIO_MODE_INPUT);
+}
+
+/* Configuração Controle MOSFET (IN/OUT) */
+void config_control_mosfet(){
+  pinMode(CONTROL_BTN_IN_MOSFET, INPUT);
+  pinMode(CONTROL_BTN_OUT_MOSFET, OUTPUT);
+
+  /* IDF VERSION */
+  // esp_rom_gpio_pad_select_gpio(CONTROL_BTN_IN_MOSFET); 
+  // gpio_set_direction(CONTROL_BTN_IN_MOSFET, GPIO_MODE_INPUT);
+
+  // esp_rom_gpio_pad_select_gpio(CONTROL_BTN_OUT_MOSFET); 
+  // gpio_set_direction(CONTROL_BTN_OUT_MOSFET, GPIO_MODE_OUTPUT);
+}
+
+/* Ações necessárias para coleta de dados */
+void coleta_dados()
+{
+  printf("Coletando dados...\n");
+  digitalWrite(LED_PIN, HIGH);
+  start_time = esp_timer_get_time(); // Pega ponto de referência inicial
+  esp_timer_start_periodic(timer0, 3000000); // Timer de 3 segundos
+  pcnt_counter_resume(PCNT_UNIT_0); // Inicia contagem
 }

@@ -47,18 +47,14 @@ void config_led(){
     gpio_set_direction(LED_PIN, GPIO_MODE_OUTPUT);
 }
 
-/*
-Configuração de BTN
-*/
+/* Configuração de BTN */
 void config_btn(){
     ESP_LOGI("CONFIG_BTN", "Configurando botão | BTN_PIN = %i",BTN_PIN);
     esp_rom_gpio_pad_select_gpio(BTN_PIN); 
     gpio_set_direction(BTN_PIN, GPIO_MODE_INPUT);
 }
 
-/*
-Configuração Controle MOSFET (IN/OUT)
-*/
+/* Configuração Controle MOSFET (IN/OUT) */
 void config_control_mosfet(){
     ESP_LOGI("CONFIG_CONTROL_MOSFET", "Configurando controle mosfet in| CONTROL_BTN_IN_MOSFET = %i",CONTROL_BTN_IN_MOSFET);
     esp_rom_gpio_pad_select_gpio(CONTROL_BTN_IN_MOSFET); 
@@ -69,17 +65,13 @@ void config_control_mosfet(){
     gpio_set_direction(CONTROL_BTN_OUT_MOSFET, GPIO_MODE_OUTPUT);
 }
 
-/*
-Resetar o contador de bordas ascendetes
-*/
+/* Resetar o contador de bordas ascendetes */
 void reset_pcnt(){
     pcnt_counter_pause(PCNT_UNIT_0); // Pausa contador
     pcnt_counter_clear(PCNT_UNIT_0); // Limpa contador
 }
 
-/*
-Resetar o timer
-*/
+/* Resetar o timer */
 void reset_timer(int timer_idx){
     timer_group_clr_intr_status_in_isr(TIMER_GROUP_0, timer_idx);// Limpar a bandeira de interrupção do timer usando a API do driver
     timer_pause(TIMER_GROUP_0, timer_idx); // Parar o timer
@@ -88,9 +80,7 @@ void reset_timer(int timer_idx){
     timer_set_alarm(TIMER_GROUP_0, timer_idx, TIMER_ALARM_EN);// Habilitar o alarme do timer
 }
 
-/*
-INTERRUPÇÃO DE TIMER
-*/
+/* INTERRUPÇÃO DE TIMER */
 void IRAM_ATTR timer_group0_isr(void *para) {
     // timer_event_t evt;
     pcnt_get_counter_value(PCNT_UNIT_0, &evt.counter_edges);
@@ -103,9 +93,7 @@ void IRAM_ATTR timer_group0_isr(void *para) {
     reset_timer(timer_idx); // Reconfigurar o timer para o próximo uso
 }
 
-/*
-Configuração de timer
-*/
+/* Configuração de timer */
 void config_timer(int timer_idx){
     ESP_LOGI("CONFIG_TIMER", "Configurando timer para %.2f segundos",(double)(TIMER_ALARM/TIMER_SCALE));
     timer_config_t config = {
@@ -144,14 +132,11 @@ double calc_temp(double freq){
     return temp;
 }
 
-/*
-Task para verificar fila de interrupção de timer
-*/
+/* Task para verificar fila de interrupção de timer */
 void timer_evt_task(void *arg){
     timer_event_t evt;
     while(1){
         if(xQueueReceive(timer_queue, &evt, portMAX_DELAY)){
-            // double freq = ((double)evt.counter_edges/ (evt.timer_counter_value/TIMER_SCALE)); // Convertendo para segundos
             double freq = ((double)evt.counter_edges * (double)TIMER_SCALE) / (double)evt.timer_counter_value;
             double temp = calc_temp(freq);
             printf("Event timer [%i]\n",evt.i);
@@ -163,9 +148,7 @@ void timer_evt_task(void *arg){
     }
 }
 
-/*
-Configuração de PCNT
-*/
+/* Configuração de PCNT */
 void config_pcnt(){
     pcnt_config_t config = {
         .pulse_gpio_num = PCNT_INPUT_SIG_IO,
@@ -227,10 +210,7 @@ void app_main(void) {
     timer_queue = xQueueCreate(10, sizeof(timer_event_t));
     xTaskCreate(timer_evt_task, "timer_evt_task", 2048, NULL, 5, NULL);
     xTaskCreate(&temp_task, "temp_task", 2048, NULL, 5, NULL);
-
 }
-
-
 
 /*
 Links úteis:
