@@ -444,17 +444,13 @@ double calc_temp(double freq){
 /* Tarefa principal do sensor */
  void vReadTmpSnsrLoop(void *pvParameters)
  {
-  bool ctr_mosfet_in_status=false;
   while(1){
+    digitalWrite(CONTROL_BTN_OUT_MOSFET, HIGH);
+    digitalWrite(LED_PIN, HIGH);
     coleta_dados();
-    ctr_mosfet_in_status = digitalRead(CONTROL_BTN_IN_MOSFET);
-     if (ctr_mosfet_in_status){
-       digitalWrite(LED_PIN, HIGH);
-       digitalWrite(CONTROL_BTN_OUT_MOSFET, HIGH);
-     }else{
-       digitalWrite(LED_PIN, LOW);
-       digitalWrite(CONTROL_BTN_OUT_MOSFET, LOW);
-     }
+    digitalWrite(CONTROL_BTN_OUT_MOSFET, LOW);
+    digitalWrite(LED_PIN, LOW);
+
     vTaskDelay((SENSOR_PERIOD * 1000) / portTICK_PERIOD_MS);
    }
  }
