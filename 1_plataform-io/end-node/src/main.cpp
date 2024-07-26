@@ -22,8 +22,8 @@
 #define TIMER_DIVIDER 80 // 80/80 = 1MHz -> incremento a cada 1ms
 #define TIMER_SCALE (80000000/TIMER_DIVIDER)
 
-#define BTN_PIN 34 //controle da chamada do sensor
-#define CONTROL_BTN_IN_MOSFET 33 //controle de MOSFET P sinal de entrada
+// #define BTN_PIN 34 //controle da chamada do sensor
+// #define CONTROL_BTN_IN_MOSFET 33 //controle de MOSFET P sinal de entrada
 #define CONTROL_BTN_OUT_MOSFET 26 //controle de MOSFET P sinal de saída
 
 /* definições para a comunicação serial LoRa*/
@@ -418,9 +418,7 @@ void IRAM_ATTR timer_callback(void* arg) {
     digitalWrite(LED_PIN, LOW);
 }
 
-
-/* Cáculo de temperatura a partir da frequencia coletada
-AJUSTE: ESSAS EQUAÇÕES DEVEM VIR DE UM ARQUIVO */
+/* Cáculo de temperatura a partir da frequencia coletada - AJUSTE: ESSAS EQUAÇÕES DEVEM VIR DE UM ARQUIVO */
 double calc_temp(double freq){
     double temp;
 
@@ -450,29 +448,34 @@ void vReadTmpSnsrLoop(void *pvParameters)
   bool btn_status=false;
   bool last_btn_status=false;
   bool ctr_mosfet_in_status=false;
+  
+  digitalWrite(CONTROL_BTN_OUT_MOSFET, HIGH);
 
   while(1){
-    // vTaskDelay(10000 / portTICK_PERIOD_MS); // Esse Delay não é necessário, está aqui apenas para teste
-    // coleta_dados();
+    /*INICIO teste*/
+    vTaskDelay(10000 / portTICK_PERIOD_MS); // Esse Delay não é necessário, está aqui apenas para teste
+    coleta_dados();
+    /*FIM teste*/
 
-    /* Controle feito fisicamente, deve ser alterado para controle via software. Para teste, comentar essa parte e descomentar parte de cima */
-    //btn_status = gpio_get_level(BTN_PIN); //modo feito em IDF
-    btn_status = digitalRead(BTN_PIN);
-    if(last_btn_status && !btn_status) {
-      coleta_dados();
-    }
-    last_btn_status = btn_status;
-    vTaskDelay(10/portTICK_PERIOD_MS);
+    // /* Controle feito fisicamente, deve ser alterado para controle via software. Para teste, comentar essa parte e descomentar parte de cima */
+    // //btn_status = gpio_get_level(BTN_PIN); //modo feito em IDF
+    // btn_status = digitalRead(BTN_PIN);
+    // if(last_btn_status && !btn_status) {
+    //   coleta_dados();
+    // }
+    // last_btn_status = btn_status;
+    // vTaskDelay(10/portTICK_PERIOD_MS);
 
-    // ctr_mosfet_in_status = gpio_get_level(CONTROL_BTN_IN_MOSFET); //modo feito em IDF
-    ctr_mosfet_in_status= digitalRead(CONTROL_BTN_IN_MOSFET);
-    if (ctr_mosfet_in_status){
-      digitalWrite(LED_PIN, HIGH);
-      digitalWrite(CONTROL_BTN_OUT_MOSFET, HIGH);
-    }else{
-      digitalWrite(LED_PIN, LOW);
-      digitalWrite(CONTROL_BTN_OUT_MOSFET, LOW);
-    }
+    // // ctr_mosfet_in_status = gpio_get_level(CONTROL_BTN_IN_MOSFET); //modo feito em IDF
+    // ctr_mosfet_in_status= digitalRead(CONTROL_BTN_IN_MOSFET);
+    // if (ctr_mosfet_in_status){
+    //   digitalWrite(LED_PIN, HIGH);
+    //   digitalWrite(CONTROL_BTN_OUT_MOSFET, HIGH);
+    // }else{
+    //   digitalWrite(LED_PIN, LOW);
+    //   digitalWrite(CONTROL_BTN_OUT_MOSFET, LOW);
+    // }
+
   }
 }
 
@@ -493,16 +496,16 @@ void timer_evt_task(void *arg){
 }
 
 /* Configuração de BTN */
-void config_btn(){
-  pinMode(BTN_PIN, INPUT);
+// void config_btn(){
+  // pinMode(BTN_PIN, INPUT);
   /* IDF VERSION */
   // esp_rom_gpio_pad_select_gpio(BTN_PIN); 
   // gpio_set_direction(BTN_PIN, GPIO_MODE_INPUT);
-}
+// }
 
 /* Configuração Controle MOSFET (IN/OUT) */
 void config_control_mosfet(){
-  pinMode(CONTROL_BTN_IN_MOSFET, INPUT);
+  // pinMode(CONTROL_BTN_IN_MOSFET, INPUT);
   pinMode(CONTROL_BTN_OUT_MOSFET, OUTPUT);
 
   /* IDF VERSION */
