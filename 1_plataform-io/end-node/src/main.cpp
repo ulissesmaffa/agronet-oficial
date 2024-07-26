@@ -442,42 +442,58 @@ double calc_temp(double freq){
 }
 
 /* Tarefa principal do sensor */
-void vReadTmpSnsrLoop(void *pvParameters)
-{
-  sensorReadings srReading;
-
-  //Essas variáveis, estão sendo controladas fisicamente, devem ser alteradas, para serem controladas por software.
-  bool btn_status=false;
-  bool last_btn_status=false;
-  bool ctr_mosfet_in_status=false;
-
+ void vReadTmpSnsrLoop(void *pvParameters)
+ {
   while(1){
-    // vTaskDelay(10000 / portTICK_PERIOD_MS); // Esse Delay não é necessário, está aqui apenas para teste
-    // coleta_dados();
+    digitalWrite(CONTROL_BTN_OUT_MOSFET, HIGH);
+    digitalWrite(LED_PIN, HIGH);
+    coleta_dados();
+    digitalWrite(CONTROL_BTN_OUT_MOSFET, LOW);
+    digitalWrite(LED_PIN, LOW);
 
-    /* Controle feito fisicamente, deve ser alterado para controle via software. Para teste, comentar essa parte e descomentar parte de cima */
-    //btn_status = gpio_get_level(BTN_PIN); //modo feito em IDF
-    btn_status = digitalRead(BTN_PIN);
-    if(last_btn_status && !btn_status) {
-      coleta_dados();
-    }
-    last_btn_status = btn_status;
-    vTaskDelay(10/portTICK_PERIOD_MS);
+    vTaskDelay((SENSOR_PERIOD * 1000) / portTICK_PERIOD_MS);
+   }
+ }
 
-    // ctr_mosfet_in_status = gpio_get_level(CONTROL_BTN_IN_MOSFET); //modo feito em IDF
-    ctr_mosfet_in_status= digitalRead(CONTROL_BTN_IN_MOSFET);
-    if (ctr_mosfet_in_status){
-      digitalWrite(LED_PIN, HIGH);
-      digitalWrite(CONTROL_BTN_OUT_MOSFET, HIGH);
-    }else{
-      digitalWrite(LED_PIN, LOW);
-      digitalWrite(CONTROL_BTN_OUT_MOSFET, LOW);
-    }
-  }
-}
+//mock data, envia dados fakes para fins de teste
+// void vReadTmpSnsrLoop(void *pvParameters)
+// {
+//   sensorReadings srReading;
+//   int count = 500;
+//   while (1)
+//   {
+//     for (int i = 0; i < 3; i++)
+//     {
+//       printf("Realizando leitura do sensor\n");
+//       srReading.dtRead = time(NULL);
+//       strcpy(srReading.sensor, "TEMP");
+//       srReading.value = (unsigned char)(count + i * 5);
+//       srReading.idSensor = (i + 1);
+//       srReading.bSent = false;
+//       srReading.bAck = false;
+//       Serial.print("time:");
+//       Serial.println(srReading.dtRead);
+//       if (xSemaphoreTake(semReadingsQueue, (TickType_t)10) == pdTRUE)
+//       {
+//         vsrReadingsQueue.push(srReading);
+//         bHasData = true;
+//         xSemaphoreGive(semReadingsQueue);
+//       }
+//     }
+//     count = count + 10;
+//     if (count > 700)
+//     {
+//       count = 500;
+//     };
+//     vTaskDelay((SENSOR_PERIOD * 1000) / portTICK_PERIOD_MS);
+//   }
+// }
+
 
 /* Task para verificar fila de interrupção de timer */
 void timer_evt_task(void *arg){
+    sensorReadings srReading;
+
     timer_event_t evt;
     while(1){
         if(xQueueReceive(timer_queue, &evt, portMAX_DELAY)){
@@ -488,6 +504,23 @@ void timer_evt_task(void *arg){
             printf("Edges: %.2f edges\n",(double) evt.counter_edges);
             printf("Freq:  %.2f Hz\n",freq);
             printf("Temp:  %.2f ºC\n",temp);
+
+            printf("Realizando leitura do sensor\n");
+            srReading.dtRead = time(NULL);
+            strcpy(srReading.sensor, "TEMP");
+            srReading.value = (unsigned char)(temp);
+            srReading.idSensor = 1; //colocar o id do sensor
+            srReading.bSent = false;
+            srReading.bAck = false;
+            Serial.print("time:");
+            Serial.println(srReading.dtRead);
+            if (xSemaphoreTake(semReadingsQueue, (TickType_t)10) == pdTRUE)
+            {
+              vsrReadingsQueue.push(srReading);
+              bHasData = true;
+              xSemaphoreGive(semReadingsQueue);
+            }
+
         }
     }
 }
