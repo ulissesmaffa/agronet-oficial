@@ -110,7 +110,7 @@ void app_main(void)
             }
         }
         // Transmissão de dados => operationMode=1
-        else{
+        else if(!isCollectingData){
             // Modo de transmissão de dados
             ESP_LOGI("MAIN", "MODO DE OPERAÇÃO = %i - TRANSMISSÃO DE DADOS",operationMode);
             wifi_init_softap();
