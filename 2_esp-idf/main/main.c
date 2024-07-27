@@ -1,7 +1,13 @@
 #include <stdio.h>
+#include <string.h>
 #include "esp_log.h"
 #include "esp_types.h"
 #include "esp_sleep.h"
+#include "esp_wifi.h"
+#include "esp_event.h"
+#include "nvs_flash.h"
+#include "esp_netif.h"
+#include "esp_http_server.h"
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -21,6 +27,14 @@
 #define PCNT_THRESH 20000 // Limite para contagem de bordas ascendentes
 #define CONTROL_BTN_OUT_MOSFET 26 //controle de MOSFET P sinal de saída
 
+/* WIFI */
+#define BTN_OPERATION_MODE 33 //controle via btn do modo de operação 0 para coleta de dados e 1 para transmissão
+#define WIFI_SSID      "AGRONET_01"
+#define WIFI_PASS      "12345678"
+#define WIFI_CHANNEL   1
+#define MAX_STA_CONN       4
+static const char *TAG = "wifi softAP";
+
 /* Estruturas de dados e variáveis globais */
 typedef struct {
     int i;
@@ -29,6 +43,8 @@ typedef struct {
 } timer_event_t;
 
 RTC_DATA_ATTR volatile int counter_index=0;
+RTC_DATA_ATTR volatile int counter_test=0;
+RTC_DATA_ATTR volatile bool operationMode=1; //0 para coleta de dados e 1 para transmissão de dados
 volatile int isDataCollectionEnabled=0;
 volatile int isCollectingData=0;
 timer_event_t evt;
@@ -40,23 +56,27 @@ void timer_evt_task(void *arg);
 void IRAM_ATTR timer_group0_isr(void *para);
 
 void config_led();
-// void config_btn();
 void config_control_mosfet();
 void config_pcnt();
 void config_timer(int timer_idx);
+void config_operation_mode();
 
 void reset_pcnt();
 void reset_timer(int timer_idx);
 double calc_temp(double freq);
 
-void update_total_sleep_time();
+static void wifi_init_softap(void) ;
+static void event_handler(void* arg, esp_event_base_t event_base,
+                          int32_t event_id, void* event_data);
+esp_err_t root_get_handler(httpd_req_t *req); 
+httpd_handle_t start_webserver(void);
 
 /* MAIN*/
 void app_main(void) 
 {
-
     config_led();
     config_control_mosfet();
+    config_operation_mode();
     config_pcnt();
     reset_pcnt();
 
@@ -68,12 +88,44 @@ void app_main(void)
 
     esp_sleep_enable_timer_wakeup(10 * 1000000); //10s
     // esp_sleep_enable_timer_wakeup(3600000000ULL); //1h
+    esp_sleep_enable_ext0_wakeup(BTN_OPERATION_MODE, 1); // Wakeup ao pressionar o botão
+    
+    // Inicializa NVS
+    esp_err_t ret = nvs_flash_init();
+    if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
+        ESP_ERROR_CHECK(nvs_flash_erase());
+        ret = nvs_flash_init();
+    }
+    ESP_ERROR_CHECK(ret);
 
     while(1){
-        if(!isCollectingData){
-            isCollectingData=1; //controla se está coletando dados
-            isDataCollectionEnabled=1; //libera para função de coletar dados
+        operationMode=gpio_get_level(BTN_OPERATION_MODE);
+
+        // Coleta de dados => operationMode=0
+        if(!operationMode){
+            if(!isCollectingData){
+                ESP_LOGI("MAIN", "MODO DE OPERAÇÃO = %i - COLETA DE DADOS",operationMode);
+                isCollectingData=1; //controla se está coletando dados
+                isDataCollectionEnabled=1; //libera para função de coletar dados
+            }
         }
+        // Transmissão de dados => operationMode=1
+        else{
+            // Modo de transmissão de dados
+            ESP_LOGI("MAIN", "MODO DE OPERAÇÃO = %i - TRANSMISSÃO DE DADOS",operationMode);
+            wifi_init_softap();
+            start_webserver();
+            while (operationMode){
+                vTaskDelay(100 / portTICK_PERIOD_MS); //delay do while
+                operationMode=gpio_get_level(BTN_OPERATION_MODE);
+                // vTaskDelay(20000 / portTICK_PERIOD_MS);
+                // operationMode=0;
+            }
+            ESP_LOGI("MAIN", "MODO DE OPERAÇÃO = %i - Vou desligar o WIFI agora (isCollectingData=%i)",operationMode,isCollectingData);
+            // Desliga o Wi-Fi após a transmissão
+            esp_wifi_stop();
+        }
+
         vTaskDelay(100 / portTICK_PERIOD_MS); // Atraso para evitar um loop muito rápido
     }
 }
@@ -85,14 +137,14 @@ void temp_task(void *arg)
     while(1){
         if(isDataCollectionEnabled){
             isDataCollectionEnabled=0; //controla a coleta de dados
-            ESP_LOGI("MAIN", "Coletando dados...");
+            ESP_LOGI("TEMP_TASK", "Coletando dados...");
             gpio_set_level(CONTROL_BTN_OUT_MOSFET, 1); // Energiza sensor
             vTaskDelay(100 / portTICK_PERIOD_MS); // Aguarda pequeno tempo para iniciar contagem após energizar sensor
             timer_start(TIMER_GROUP_0, TIMER_0); // Inicia timer
             pcnt_counter_resume(PCNT_UNIT_0);    // Inicia contagem
             gpio_set_level(LED_PIN, 1);
         }
-        vTaskDelay(10/portTICK_PERIOD_MS);
+        vTaskDelay(100/portTICK_PERIOD_MS);
     }
 
     //Versão com botões físicos
@@ -138,8 +190,21 @@ void timer_evt_task(void *arg)
             printf("Temp:  %.2f ºC\n",temp);
 
             // Aqui é quando acaba a coleta de dados
+            // counter_test++;
+            // if(counter_test==3){
+            //     ESP_LOGI("timer_evt_task", "Vou mudar o modo de operação que está %i para 1",operationMode);
+            //     counter_test=0;
+            //     operationMode=1;
+            //     isCollectingData=0;
+            // }else{
+            //     vTaskDelay(1000/portTICK_PERIOD_MS);
+            //     ESP_LOGI("timer_evt_task", "Vou colocar a ESP em deep-sleep");
+            //     vTaskDelay(1000/portTICK_PERIOD_MS);
+            //     esp_deep_sleep_start();
+            // }
+            
             vTaskDelay(1000/portTICK_PERIOD_MS);
-            ESP_LOGI("MAIN", "Entrando em deep-sleep por 10 segundos...");
+            ESP_LOGI("timer_evt_task", "Vou colocar a ESP em deep-sleep");
             vTaskDelay(1000/portTICK_PERIOD_MS);
             esp_deep_sleep_start();
         }
@@ -218,6 +283,14 @@ void config_timer(int timer_idx)
     timer_isr_register(TIMER_GROUP_0, timer_idx, timer_group0_isr, (void *) timer_idx, ESP_INTR_FLAG_IRAM, NULL);
 }
 
+/* Configuração do botão externo de modo de operação */
+void config_operation_mode()
+{
+    ESP_LOGI("CONFIG_OPERATION_MODE", "Configurando controle por botão do modo de operação| BTN_OPERATION_MODE = %i",BTN_OPERATION_MODE);
+    esp_rom_gpio_pad_select_gpio(BTN_OPERATION_MODE); 
+    gpio_set_direction(BTN_OPERATION_MODE, GPIO_MODE_INPUT);
+}
+
 /* Resetar o contador de bordas ascendetes */
 void reset_pcnt()
 {
@@ -254,4 +327,80 @@ double calc_temp(double freq)
     }
 
     return temp;
+}
+
+/* Config Wifi */
+static void wifi_init_softap(void) 
+{
+    ESP_ERROR_CHECK(esp_netif_init());
+    ESP_ERROR_CHECK(esp_event_loop_create_default());
+    esp_netif_create_default_wifi_ap();
+    wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
+    ESP_ERROR_CHECK(esp_wifi_init(&cfg));
+    // esp_netif_init();
+    // esp_event_loop_create_default();
+    // esp_netif_create_default_wifi_ap();
+    // wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
+    // esp_wifi_init(&cfg);
+
+    wifi_config_t wifi_config = {
+        .ap = {
+            .ssid = WIFI_SSID,
+            .ssid_len = strlen(WIFI_SSID),
+            .channel = WIFI_CHANNEL,
+            .password = WIFI_PASS,
+            .max_connection = MAX_STA_CONN,
+            .authmode = WIFI_AUTH_WPA_WPA2_PSK
+        },
+    };
+    if (strlen(WIFI_PASS) == 0) {
+        wifi_config.ap.authmode = WIFI_AUTH_OPEN;
+    }
+
+    ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_AP));
+    ESP_ERROR_CHECK(esp_wifi_set_config(ESP_IF_WIFI_AP, &wifi_config));
+    ESP_ERROR_CHECK(esp_wifi_start());
+    // esp_wifi_set_mode(WIFI_MODE_AP);
+    // esp_wifi_set_config(ESP_IF_WIFI_AP, &wifi_config);
+    // esp_wifi_start();
+
+    ESP_LOGI(TAG, "wifi_init_softap finished. SSID:%s password:%s channel:%d",
+             WIFI_SSID, WIFI_PASS, WIFI_CHANNEL);
+}
+
+/* Função de evento Wi-Fi */
+static void event_handler(void* arg, esp_event_base_t event_base,
+                          int32_t event_id, void* event_data) 
+{
+    if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_AP_START) {
+        ESP_LOGI("wifi softAP", "AP started");
+    } else if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_AP_STOP) {
+        ESP_LOGI("wifi softAP", "AP stopped");
+    }
+}
+
+/* Handler para o URI root */
+esp_err_t root_get_handler(httpd_req_t *req) 
+{
+    const char* resp_str = (const char*) "<html><body><h1>Dados coletados</h1><p>Dados Coletados...</p></body></html>";
+    httpd_resp_send(req, resp_str, strlen(resp_str));
+    return ESP_OK;
+}
+
+/* Inicialização do servidor web */
+httpd_handle_t start_webserver(void) 
+{
+    httpd_config_t config = HTTPD_DEFAULT_CONFIG();
+    httpd_handle_t server = NULL;
+
+    if (httpd_start(&server, &config) == ESP_OK) {
+        httpd_uri_t root = {
+            .uri       = "/",
+            .method    = HTTP_GET,
+            .handler   = root_get_handler,
+            .user_ctx  = NULL
+        };
+        httpd_register_uri_handler(server, &root);
+    }
+    return server;
 }
