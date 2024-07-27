@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include "esp_log.h"
 #include "esp_types.h"
+#include "esp_sleep.h"
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -27,7 +28,9 @@ typedef struct {
     int16_t counter_edges;
 } timer_event_t;
 
-volatile int counter_index=0;
+RTC_DATA_ATTR volatile int counter_index=0;
+volatile int isDataCollectionEnabled=0;
+volatile int isCollectingData=0;
 timer_event_t evt;
 QueueHandle_t timer_queue;
 
@@ -46,11 +49,13 @@ void reset_pcnt();
 void reset_timer(int timer_idx);
 double calc_temp(double freq);
 
+void update_total_sleep_time();
+
 /* MAIN*/
 void app_main(void) 
 {
+
     config_led();
-    // config_btn();
     config_control_mosfet();
     config_pcnt();
     reset_pcnt();
@@ -60,23 +65,34 @@ void app_main(void)
     timer_queue = xQueueCreate(10, sizeof(timer_event_t));
     xTaskCreate(timer_evt_task, "timer_evt_task", 2048, NULL, 5, NULL);
     xTaskCreate(&temp_task, "temp_task", 2048, NULL, 5, NULL);
+
+    esp_sleep_enable_timer_wakeup(10 * 1000000); //10s
+    // esp_sleep_enable_timer_wakeup(3600000000ULL); //1h
+
+    while(1){
+        if(!isCollectingData){
+            isCollectingData=1; //controla se está coletando dados
+            isDataCollectionEnabled=1; //libera para função de coletar dados
+        }
+        vTaskDelay(100 / portTICK_PERIOD_MS); // Atraso para evitar um loop muito rápido
+    }
 }
 
 /* Task principal do sensor */
 void temp_task(void *arg)
 {
     /*Versão simplificada para teste*/
-    int counter=0;
     while(1){
-        counter++;
-        ESP_LOGI("MAIN", "[%i] Coletando dados...",counter);
-        gpio_set_level(CONTROL_BTN_OUT_MOSFET,1); // Energiza sensor
-        vTaskDelay(100/portTICK_PERIOD_MS); // Aguarda pequeno tempo para iniciar contagem após energizar sensor
-        timer_start(TIMER_GROUP_0, TIMER_0); // Inicia timer
-        pcnt_counter_resume(PCNT_UNIT_0);    // Inicia contagem
-        gpio_set_level(LED_PIN,1);
-
-        vTaskDelay(10000/portTICK_PERIOD_MS);
+        if(isDataCollectionEnabled){
+            isDataCollectionEnabled=0; //controla a coleta de dados
+            ESP_LOGI("MAIN", "Coletando dados...");
+            gpio_set_level(CONTROL_BTN_OUT_MOSFET, 1); // Energiza sensor
+            vTaskDelay(100 / portTICK_PERIOD_MS); // Aguarda pequeno tempo para iniciar contagem após energizar sensor
+            timer_start(TIMER_GROUP_0, TIMER_0); // Inicia timer
+            pcnt_counter_resume(PCNT_UNIT_0);    // Inicia contagem
+            gpio_set_level(LED_PIN, 1);
+        }
+        vTaskDelay(10/portTICK_PERIOD_MS);
     }
 
     //Versão com botões físicos
@@ -120,6 +136,12 @@ void timer_evt_task(void *arg)
             printf("Edges: %.2f edges\n",(double) evt.counter_edges);
             printf("Freq:  %.2f Hz\n",freq);
             printf("Temp:  %.2f ºC\n",temp);
+
+            // Aqui é quando acaba a coleta de dados
+            vTaskDelay(1000/portTICK_PERIOD_MS);
+            ESP_LOGI("MAIN", "Entrando em deep-sleep por 10 segundos...");
+            vTaskDelay(1000/portTICK_PERIOD_MS);
+            esp_deep_sleep_start();
         }
     }
 }
@@ -147,14 +169,6 @@ void config_led()
     esp_rom_gpio_pad_select_gpio(LED_PIN); 
     gpio_set_direction(LED_PIN, GPIO_MODE_OUTPUT);
 }
-
-/* Configuração de BTN */
-// void config_btn()
-//{
-//     ESP_LOGI("CONFIG_BTN", "Configurando botão | BTN_PIN = %i",BTN_PIN);
-//     esp_rom_gpio_pad_select_gpio(BTN_PIN); 
-//     gpio_set_direction(BTN_PIN, GPIO_MODE_INPUT);
-// }
 
 /* Configuração Controle MOSFET (IN/OUT) */
 void config_control_mosfet()
@@ -241,7 +255,3 @@ double calc_temp(double freq)
 
     return temp;
 }
-
-
-
-
