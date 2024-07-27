@@ -1,0 +1,42 @@
+Processo realizado em MACBOOK PRO M2
+
+1. Conectar ESP32 usb
+
+2. Comando para encontrar ESP32 pelo terminal: 
+    cmd: ls /dev/cu.*
+    out: /dev/cu.Bluetooth-Incoming-Port /dev/cu.usbserial-0001
+
+3. Estabelecer uma comunicação pelo terminal (screen /dev/cu.device_name 115200)
+    cmd: screen /dev/cu.usbserial-0001 115200
+    out: tela com device
+    Para sair, clicar no terminal: Ctrl + a + \
+
+4. Para configurar o projeto (estando na pasta ~/agronet/Ulisses e usando o hello_world como exemplo):
+    cmd: cd /hello_world
+
+    cmd: idf.py set-target esp32
+        se idf.py não funcionar (zsh: command not found: idf.py)
+             . $HOME/esp/esp-idf/export.sh 
+
+    //Opicional
+    cmd: idf.py menuconfig
+        Você está usando este menu para configurar variáveis ​​específicas do projeto, por exemplo, nome e senha da rede Wi-Fi, a velocidade do processador etc.
+
+5. Build do código
+    cmd: idf.py build
+
+6. Flash na ESP32 (idf.py -p PORT flash)
+    cmd: idf.py -p /dev/cu.usbserial-0001 flash
+    out: Leaving...
+         Hard resetting via RTS pin...
+         Done
+
+
+/*
+Links úteis:
+https://docs.espressif.com/projects/esp-idf/en/v5.0.2/esp32/api-reference/peripherals/pcnt.html#_CPPv434pcnt_unit_register_event_callbacks18pcnt_unit_handle_tPK22pcnt_event_callbacks_tPv
+https://docs.espressif.com/projects/esp-idf/en/v5.0.2/esp32/migration-guides/release-5.x/peripherals.html
+https://github.com/espressif/esp-idf/blob/v5.0.2/examples/peripherals/pcnt/rotary_encoder/main/rotary_encoder_example_main.c#L60
+https://docs.espressif.com/projects/esp-idf/en/v3.3.2/api-reference/peripherals/pcnt.html#_CPPv418pcnt_filter_enable11pcnt_unit_t
+https://github.com/espressif/esp-idf/blob/v3.3.2/examples/peripherals/pcnt/main/pcnt_example_main.c
+*/
