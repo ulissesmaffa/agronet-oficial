@@ -32,30 +32,31 @@ timer_event_t evt;
 QueueHandle_t timer_queue;
 
 /* Funções do sistema*/
+void temp_task(void *arg);
+void timer_evt_task(void *arg);
+void IRAM_ATTR timer_group0_isr(void *para);
+
 void config_led();
 // void config_btn();
 void config_control_mosfet();
 void config_pcnt();
 void config_timer(int timer_idx);
+
 void reset_pcnt();
 void reset_timer(int timer_idx);
-void IRAM_ATTR timer_group0_isr(void *para);
 double calc_temp(double freq);
-void timer_evt_task(void *arg);
-void temp_task(void *arg);
 
 /* MAIN*/
 void app_main(void) 
 {
     config_led();
     // config_btn();
-
     config_control_mosfet();
-
     config_pcnt();
     reset_pcnt();
-    config_timer(TIMER_0);
 
+    config_timer(TIMER_0);
+    
     timer_queue = xQueueCreate(10, sizeof(timer_event_t));
     xTaskCreate(timer_evt_task, "timer_evt_task", 2048, NULL, 5, NULL);
     xTaskCreate(&temp_task, "temp_task", 2048, NULL, 5, NULL);
@@ -182,6 +183,25 @@ void config_pcnt()
     /* Configure and enable the input filter */
     pcnt_set_filter_value(PCNT_UNIT_0, 100);
     pcnt_filter_enable(PCNT_UNIT_0);
+}
+
+/* Configuração de timer */
+void config_timer(int timer_idx)
+{
+    ESP_LOGI("CONFIG_TIMER", "Configurando timer para %.2f segundos",(double)(TIMER_ALARM/TIMER_SCALE));
+    timer_config_t config = {
+        .divider = TIMER_DIVIDER, //define o clk do timer
+        .counter_dir = TIMER_COUNT_UP, //conta para cima
+        .counter_en = TIMER_PAUSE, //inicia o timer parado
+        .alarm_en = TIMER_ALARM_EN, //habilita alarme no timer
+        .auto_reload = TIMER_AUTORELOAD_DIS, //atinge o alarme e recomeça a contagem
+    };
+    timer_init(TIMER_GROUP_0, timer_idx, &config);//inicializa timer
+    
+    timer_set_counter_value(TIMER_GROUP_0, timer_idx, 0x00000000ULL); //timer inicia em zero
+    timer_set_alarm_value(TIMER_GROUP_0, timer_idx, TIMER_ALARM);//depende do clk do timer
+    timer_enable_intr(TIMER_GROUP_0, timer_idx); //habilita interrupções
+    timer_isr_register(TIMER_GROUP_0, timer_idx, timer_group0_isr, (void *) timer_idx, ESP_INTR_FLAG_IRAM, NULL);
 }
 
 /* Resetar o contador de bordas ascendetes */
