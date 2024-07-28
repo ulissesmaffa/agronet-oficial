@@ -8,6 +8,8 @@
 #include "nvs_flash.h"
 #include "esp_netif.h"
 #include "esp_http_server.h"
+#include "esp_spiffs.h"
+#include "esp_err.h"
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -66,10 +68,14 @@ void reset_timer(int timer_idx);
 double calc_temp(double freq);
 
 static void wifi_init_softap(void) ;
-static void event_handler(void* arg, esp_event_base_t event_base,
-                          int32_t event_id, void* event_data);
+static void event_handler(void* arg, esp_event_base_t event_base, int32_t event_id, void* event_data);
 esp_err_t root_get_handler(httpd_req_t *req); 
 httpd_handle_t start_webserver(void);
+
+esp_err_t init_spiffs();
+void get_file_info(const char *filename);
+void write_to_file(const char *filename, const char *data);
+void delete_file(const char *filename);
 
 /* MAIN*/
 void app_main(void) 
@@ -86,8 +92,8 @@ void app_main(void)
     xTaskCreate(timer_evt_task, "timer_evt_task", 2048, NULL, 5, NULL);
     xTaskCreate(&temp_task, "temp_task", 2048, NULL, 5, NULL);
 
-    esp_sleep_enable_timer_wakeup(10 * 1000000); //10s
-    // esp_sleep_enable_timer_wakeup(3600000000ULL); //1h
+    // esp_sleep_enable_timer_wakeup(10 * 1000000); //10s
+    esp_sleep_enable_timer_wakeup(3600000000ULL); //1h
     esp_sleep_enable_ext0_wakeup(BTN_OPERATION_MODE, 1); // Wakeup ao pressionar o botão
     
     // Inicializa NVS
@@ -97,6 +103,16 @@ void app_main(void)
         ret = nvs_flash_init();
     }
     ESP_ERROR_CHECK(ret);
+
+    // Inicializa o sistema de arquivos
+    if (init_spiffs() != ESP_OK){
+        ESP_LOGE("MAIN","Erro ao inicializar o sistema de arquivos SPIFFS");
+        return; // Não continue se falhar
+    }
+
+    // Verifica arquivo, caso não tenha, crie
+    get_file_info("/spiffs/temp.txt");
+    // delete_file("/spiffs/temp.txt");
 
     while(1){
         operationMode=gpio_get_level(BTN_OPERATION_MODE);
@@ -179,17 +195,22 @@ void temp_task(void *arg)
 void timer_evt_task(void *arg)
 {
     timer_event_t evt;
+    char log_buffer[256]; //gravar em arquivo
     while(1){
         if(xQueueReceive(timer_queue, &evt, portMAX_DELAY)){
             double freq = ((double)evt.counter_edges * (double)TIMER_SCALE) / (double)evt.timer_counter_value;
             double temp = calc_temp(freq);
             printf("Event timer [%i]\n",evt.i);
-            printf("Time:  %.5f s\n",(double) evt.timer_counter_value / TIMER_SCALE);
-            printf("Edges: %.2f edges\n",(double) evt.counter_edges);
+            // printf("Time:  %.5f s\n",(double) evt.timer_counter_value / TIMER_SCALE);
+            // printf("Edges: %.2f edges\n",(double) evt.counter_edges);
             printf("Freq:  %.2f Hz\n",freq);
             printf("Temp:  %.2f ºC\n",temp);
 
-            // Aqui é quando acaba a coleta de dados
+            //Grava informação em arquivo
+            sprintf(log_buffer, "[%i];Frequencia(Hz):%.2f;Temperatura(C):%.2f ;",evt.i,freq,temp);
+            write_to_file("/spiffs/temp.txt", log_buffer);
+
+            // Aqui é quando acaba a coleta de dados - TESTE
             // counter_test++;
             // if(counter_test==3){
             //     ESP_LOGI("timer_evt_task", "Vou mudar o modo de operação que está %i para 1",operationMode);
@@ -203,9 +224,8 @@ void timer_evt_task(void *arg)
             //     esp_deep_sleep_start();
             // }
             
-            vTaskDelay(1000/portTICK_PERIOD_MS);
+            vTaskDelay(10/portTICK_PERIOD_MS);
             ESP_LOGI("timer_evt_task", "Vou colocar a ESP em deep-sleep");
-            vTaskDelay(1000/portTICK_PERIOD_MS);
             esp_deep_sleep_start();
         }
     }
@@ -369,8 +389,7 @@ static void wifi_init_softap(void)
 }
 
 /* Função de evento Wi-Fi */
-static void event_handler(void* arg, esp_event_base_t event_base,
-                          int32_t event_id, void* event_data) 
+static void event_handler(void* arg, esp_event_base_t event_base,int32_t event_id, void* event_data) 
 {
     if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_AP_START) {
         ESP_LOGI("wifi softAP", "AP started");
@@ -380,10 +399,61 @@ static void event_handler(void* arg, esp_event_base_t event_base,
 }
 
 /* Handler para o URI root */
+// esp_err_t root_get_handler(httpd_req_t *req) 
+// {
+//     const char* resp_str = (const char*) "<html><body><h1>Dados coletados</h1><p>Dados Coletados...</p></body></html>";
+//     httpd_resp_send(req, resp_str, strlen(resp_str));
+//     return ESP_OK;
+// }
 esp_err_t root_get_handler(httpd_req_t *req) 
 {
-    const char* resp_str = (const char*) "<html><body><h1>Dados coletados</h1><p>Dados Coletados...</p></body></html>";
+    const char* filename = "/spiffs/temp.txt"; // Altere para o nome do seu arquivo
+    FILE* f = fopen(filename, "r");
+    if (f == NULL) {
+        ESP_LOGE("root_get_handler", "Falha ao abrir o arquivo %s para leitura", filename);
+        const char* error_resp = "<html><body><h1>Erro</h1><p>Falha ao ler o arquivo.</p></body></html>";
+        httpd_resp_send(req, error_resp, strlen(error_resp));
+        return ESP_FAIL;
+    }
+
+    // Determina o tamanho do arquivo
+    fseek(f, 0, SEEK_END);
+    long fsize = ftell(f);
+    fseek(f, 0, SEEK_SET);
+
+    // Aloca memória para o conteúdo do arquivo
+    char* file_content = malloc(fsize + 1);
+    if (file_content == NULL) {
+        ESP_LOGE("root_get_handler", "Falha ao alocar memória para o conteúdo do arquivo");
+        fclose(f);
+        const char* error_resp = "<html><body><h1>Erro</h1><p>Falha ao alocar memória para o arquivo.</p></body></html>";
+        httpd_resp_send(req, error_resp, strlen(error_resp));
+        return ESP_FAIL;
+    }
+
+    // Lê o conteúdo do arquivo
+    fread(file_content, 1, fsize, f);
+    file_content[fsize] = '\0';
+    fclose(f);
+
+    // Formata a resposta HTML
+    const char* resp_template = "<html><body><h1>Dados coletados</h1><p>%s</p></body></html>";
+    int resp_size = strlen(resp_template) + strlen(file_content) + 1;
+    char* resp_str = malloc(resp_size);
+
+    if (resp_str == NULL) {
+        ESP_LOGE("root_get_handler", "Falha ao alocar memória para a resposta");
+        const char* error_resp = "<html><body><h1>Erro</h1><p>Falha ao gerar a resposta.</p></body></html>";
+        httpd_resp_send(req, error_resp, strlen(error_resp));
+        free(file_content);
+        return ESP_FAIL;
+    }
+
+    snprintf(resp_str, resp_size, resp_template, file_content);
     httpd_resp_send(req, resp_str, strlen(resp_str));
+
+    free(file_content);
+    free(resp_str);
     return ESP_OK;
 }
 
@@ -403,4 +473,94 @@ httpd_handle_t start_webserver(void)
         httpd_register_uri_handler(server, &root);
     }
     return server;
+}
+
+/* Inicializa sistema de arquivos */
+esp_err_t init_spiffs()
+{
+    ESP_LOGI("SPIFFS","Inicializando o sistema de arquivos SPIFFS");
+
+    esp_vfs_spiffs_conf_t conf = {
+        .base_path = "/spiffs",
+        .partition_label = NULL,
+        .max_files = 5,
+        .format_if_mount_failed = true};
+
+    // Registra o sistema de arquivos no VFS
+    esp_err_t ret = esp_vfs_spiffs_register(&conf);
+    if (ret != ESP_OK)
+    {
+        if (ret == ESP_FAIL){
+            ESP_LOGE("SPIFFS","Falha ao montar ou formatar o sistema de arquivos");
+        }
+        else if (ret == ESP_ERR_NOT_FOUND){
+            ESP_LOGE("SPIFFS","Partição SPIFFS não encontrada");
+        }
+        else{
+            ESP_LOGE("SPIFFS","Erro desconhecido ao inicializar SPIFFS: %s",esp_err_to_name(ret));
+        }
+    }
+    else
+    {
+        size_t total = 0, used = 0;
+        if (esp_spiffs_info(NULL, &total, &used) == ESP_OK){
+            ESP_LOGI("SPIFFS","Sistema de arquivos montado, total: %d, usado: %d",total, used);
+        }
+    }
+    return ret;
+}
+
+/* Cria arquivo ou pega arquivo que existe */
+void get_file_info(const char *filename)
+{
+    FILE *f = fopen(filename, "r");
+    if (f == NULL)
+    {
+        // O arquivo não existe, então cria um novo arquivo
+        f = fopen(filename, "w");
+        if (f == NULL)
+        {
+            ESP_LOGE("get_file_info","Não foi possível criar o arquivo %s", filename);
+            return;
+        }
+        ESP_LOGI("get_file_info","Arquivo %s criado", filename);
+    }
+    else
+    {
+        // O arquivo existe, lê as informações do arquivo
+        int line_count = 0;
+        char buffer[128]; // Buffer para ler cada linha
+
+        while (fgets(buffer, sizeof(buffer), f) != NULL){
+            line_count++;
+        }
+        ESP_LOGI("get_file_info","Arquivo %s contém %d linhas", filename, line_count);
+    }
+    fclose(f);
+}
+
+/* Deleta arquivo */
+void delete_file(const char *filename)
+{
+    if (remove(filename) == 0){
+        ESP_LOGI("delete_file","Arquivo '%s' excluído com sucesso.", filename);
+    }
+    else{
+        ESP_LOGE("delete_file","Falha ao excluir o arquivo '%s'.", filename);
+    }
+}
+
+/* Escreve no arquivo */
+void write_to_file(const char *filename, const char *data)
+{
+    FILE *f = fopen(filename, "a");
+    if (f == NULL)
+    {
+        ESP_LOGE("write_to_file","Falha ao abrir o arquivo %s para escrita", filename);
+        return;
+    }
+
+    fprintf(f, "%s\n", data); // Escreve a linha no arquivo e adiciona uma quebra de linha
+    fclose(f);
+    // ESP_LOGI("write_to_file","Dados gravados no arquivo: %s", data);
 }
