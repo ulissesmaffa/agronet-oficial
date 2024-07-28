@@ -134,8 +134,7 @@ void app_main(void)
             while (operationMode){
                 vTaskDelay(100 / portTICK_PERIOD_MS); //delay do while
                 operationMode=gpio_get_level(BTN_OPERATION_MODE);
-                // vTaskDelay(20000 / portTICK_PERIOD_MS);
-                // operationMode=0;
+                
             }
             ESP_LOGI("MAIN", "MODO DE OPERAÇÃO = %i - Vou desligar o WIFI agora (isCollectingData=%i)",operationMode,isCollectingData);
             // Desliga o Wi-Fi após a transmissão
