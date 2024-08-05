@@ -92,8 +92,8 @@ void app_main(void)
     xTaskCreate(timer_evt_task, "timer_evt_task", 2048, NULL, 5, NULL);
     xTaskCreate(&temp_task, "temp_task", 2048, NULL, 5, NULL);
 
-    // esp_sleep_enable_timer_wakeup(10 * 1000000); //10s
-    esp_sleep_enable_timer_wakeup(3600000000ULL); //1h
+    esp_sleep_enable_timer_wakeup(10 * 1500000); //15s
+    // esp_sleep_enable_timer_wakeup(3600000000ULL); //1h
     esp_sleep_enable_ext0_wakeup(BTN_OPERATION_MODE, 1); // Wakeup ao pressionar o botão
     
     // Inicializa NVS
@@ -207,7 +207,7 @@ void timer_evt_task(void *arg)
 
             //Grava informação em arquivo
             sprintf(log_buffer, "[%i];Frequencia(Hz):%.2f;Temperatura(C):%.2f ;",evt.i,freq,temp);
-            write_to_file("/spiffs/temp.txt", log_buffer);
+            write_to_file("/spiffs/temp.txt", log_buffer); //ESCREVER AQUI
 
             // Aqui é quando acaba a coleta de dados - TESTE
             // counter_test++;
@@ -269,6 +269,9 @@ void config_control_mosfet()
 /* Configuração de PCNT */
 void config_pcnt()
 {
+    gpio_set_direction(PCNT_INPUT_SIG_IO, GPIO_MODE_INPUT);
+    //gpio_set_pull_mode(PCNT_INPUT_SIG_IO, GPIO_FLOATING);
+
     pcnt_config_t config = {
         .pulse_gpio_num = PCNT_INPUT_SIG_IO,
         .channel = PCNT_CHANNEL_0,
