@@ -20,6 +20,10 @@
 #include "driver/gpio.h"
 #include "driver/pcnt.h"
 
+#include "lwip/err.h"
+#include "lwip/sys.h"
+#include "esp_mac.h"
+
 #define LED_PIN       2  // LED interno da ESP32
 #define TIMER_DIVIDER 80 // 80/80 = 1MHz -> incremento a cada 1ms
 #define TIMER_SCALE (80000000/TIMER_DIVIDER)
@@ -67,10 +71,12 @@ void reset_pcnt();
 void reset_timer(int timer_idx);
 double calc_temp(double freq);
 
-static void wifi_init_softap(void) ;
-static void event_handler(void* arg, esp_event_base_t event_base, int32_t event_id, void* event_data);
-esp_err_t root_get_handler(httpd_req_t *req); 
+static void wifi_event_handler(void* arg, esp_event_base_t event_base, int32_t event_id, void* event_data);
+void wifi_init_softap(void);
+void wifi_deinit_softap(void);
 httpd_handle_t start_webserver(void);
+void stop_webserver(httpd_handle_t server);
+esp_err_t root_get_handler(httpd_req_t *req);
 
 esp_err_t init_spiffs();
 void get_file_info(const char *filename);
@@ -92,15 +98,16 @@ void app_main(void)
     xTaskCreate(timer_evt_task, "timer_evt_task", 2048, NULL, 5, NULL);
     xTaskCreate(&temp_task, "temp_task", 2048, NULL, 5, NULL);
 
-    esp_sleep_enable_timer_wakeup(10 * 1500000); //15s
+    // esp_sleep_enable_timer_wakeup(10 * 1500000); //15s
     // esp_sleep_enable_timer_wakeup(3600000000ULL); //1h
+    esp_sleep_enable_timer_wakeup(900000000ULL); // 15 minutos
     esp_sleep_enable_ext0_wakeup(BTN_OPERATION_MODE, 1); // Wakeup ao pressionar o botão
     
-    // Inicializa NVS
+    //Initialize NVS
     esp_err_t ret = nvs_flash_init();
     if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
-        ESP_ERROR_CHECK(nvs_flash_erase());
-        ret = nvs_flash_init();
+      ESP_ERROR_CHECK(nvs_flash_erase());
+      ret = nvs_flash_init();
     }
     ESP_ERROR_CHECK(ret);
 
@@ -130,7 +137,7 @@ void app_main(void)
             // Modo de transmissão de dados
             ESP_LOGI("MAIN", "MODO DE OPERAÇÃO = %i - TRANSMISSÃO DE DADOS",operationMode);
             wifi_init_softap();
-            start_webserver();
+            httpd_handle_t server = start_webserver();  // Inicializa o servidor web
             while (operationMode){
                 vTaskDelay(100 / portTICK_PERIOD_MS); //delay do while
                 operationMode=gpio_get_level(BTN_OPERATION_MODE);
@@ -138,7 +145,8 @@ void app_main(void)
             }
             ESP_LOGI("MAIN", "MODO DE OPERAÇÃO = %i - Vou desligar o WIFI agora (isCollectingData=%i)",operationMode,isCollectingData);
             // Desliga o Wi-Fi após a transmissão
-            esp_wifi_stop();
+            stop_webserver(server); 
+            wifi_deinit_softap();
         }
 
         vTaskDelay(100 / portTICK_PERIOD_MS); // Atraso para evitar um loop muito rápido
@@ -208,20 +216,6 @@ void timer_evt_task(void *arg)
             //Grava informação em arquivo
             sprintf(log_buffer, "[%i];Frequencia(Hz):%.2f;Temperatura(C):%.2f ;",evt.i,freq,temp);
             write_to_file("/spiffs/temp.txt", log_buffer); //ESCREVER AQUI
-
-            // Aqui é quando acaba a coleta de dados - TESTE
-            // counter_test++;
-            // if(counter_test==3){
-            //     ESP_LOGI("timer_evt_task", "Vou mudar o modo de operação que está %i para 1",operationMode);
-            //     counter_test=0;
-            //     operationMode=1;
-            //     isCollectingData=0;
-            // }else{
-            //     vTaskDelay(1000/portTICK_PERIOD_MS);
-            //     ESP_LOGI("timer_evt_task", "Vou colocar a ESP em deep-sleep");
-            //     vTaskDelay(1000/portTICK_PERIOD_MS);
-            //     esp_deep_sleep_start();
-            // }
             
             vTaskDelay(10/portTICK_PERIOD_MS);
             ESP_LOGI("timer_evt_task", "Vou colocar a ESP em deep-sleep");
@@ -351,132 +345,6 @@ double calc_temp(double freq)
     return temp;
 }
 
-/* Config Wifi */
-static void wifi_init_softap(void) 
-{
-    ESP_ERROR_CHECK(esp_netif_init());
-    ESP_ERROR_CHECK(esp_event_loop_create_default());
-    esp_netif_create_default_wifi_ap();
-    wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
-    ESP_ERROR_CHECK(esp_wifi_init(&cfg));
-    // esp_netif_init();
-    // esp_event_loop_create_default();
-    // esp_netif_create_default_wifi_ap();
-    // wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
-    // esp_wifi_init(&cfg);
-
-    wifi_config_t wifi_config = {
-        .ap = {
-            .ssid = WIFI_SSID,
-            .ssid_len = strlen(WIFI_SSID),
-            .channel = WIFI_CHANNEL,
-            .password = WIFI_PASS,
-            .max_connection = MAX_STA_CONN,
-            .authmode = WIFI_AUTH_WPA_WPA2_PSK
-        },
-    };
-    if (strlen(WIFI_PASS) == 0) {
-        wifi_config.ap.authmode = WIFI_AUTH_OPEN;
-    }
-
-    ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_AP));
-    ESP_ERROR_CHECK(esp_wifi_set_config(ESP_IF_WIFI_AP, &wifi_config));
-    ESP_ERROR_CHECK(esp_wifi_start());
-    // esp_wifi_set_mode(WIFI_MODE_AP);
-    // esp_wifi_set_config(ESP_IF_WIFI_AP, &wifi_config);
-    // esp_wifi_start();
-
-    ESP_LOGI(TAG, "wifi_init_softap finished. SSID:%s password:%s channel:%d",
-             WIFI_SSID, WIFI_PASS, WIFI_CHANNEL);
-}
-
-/* Função de evento Wi-Fi */
-static void event_handler(void* arg, esp_event_base_t event_base,int32_t event_id, void* event_data) 
-{
-    if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_AP_START) {
-        ESP_LOGI("wifi softAP", "AP started");
-    } else if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_AP_STOP) {
-        ESP_LOGI("wifi softAP", "AP stopped");
-    }
-}
-
-/* Handler para o URI root */
-// esp_err_t root_get_handler(httpd_req_t *req) 
-// {
-//     const char* resp_str = (const char*) "<html><body><h1>Dados coletados</h1><p>Dados Coletados...</p></body></html>";
-//     httpd_resp_send(req, resp_str, strlen(resp_str));
-//     return ESP_OK;
-// }
-esp_err_t root_get_handler(httpd_req_t *req) 
-{
-    const char* filename = "/spiffs/temp.txt"; // Altere para o nome do seu arquivo
-    FILE* f = fopen(filename, "r");
-    if (f == NULL) {
-        ESP_LOGE("root_get_handler", "Falha ao abrir o arquivo %s para leitura", filename);
-        const char* error_resp = "<html><body><h1>Erro</h1><p>Falha ao ler o arquivo.</p></body></html>";
-        httpd_resp_send(req, error_resp, strlen(error_resp));
-        return ESP_FAIL;
-    }
-
-    // Determina o tamanho do arquivo
-    fseek(f, 0, SEEK_END);
-    long fsize = ftell(f);
-    fseek(f, 0, SEEK_SET);
-
-    // Aloca memória para o conteúdo do arquivo
-    char* file_content = malloc(fsize + 1);
-    if (file_content == NULL) {
-        ESP_LOGE("root_get_handler", "Falha ao alocar memória para o conteúdo do arquivo");
-        fclose(f);
-        const char* error_resp = "<html><body><h1>Erro</h1><p>Falha ao alocar memória para o arquivo.</p></body></html>";
-        httpd_resp_send(req, error_resp, strlen(error_resp));
-        return ESP_FAIL;
-    }
-
-    // Lê o conteúdo do arquivo
-    fread(file_content, 1, fsize, f);
-    file_content[fsize] = '\0';
-    fclose(f);
-
-    // Formata a resposta HTML
-    const char* resp_template = "<html><body><h1>Dados coletados</h1><p>%s</p></body></html>";
-    int resp_size = strlen(resp_template) + strlen(file_content) + 1;
-    char* resp_str = malloc(resp_size);
-
-    if (resp_str == NULL) {
-        ESP_LOGE("root_get_handler", "Falha ao alocar memória para a resposta");
-        const char* error_resp = "<html><body><h1>Erro</h1><p>Falha ao gerar a resposta.</p></body></html>";
-        httpd_resp_send(req, error_resp, strlen(error_resp));
-        free(file_content);
-        return ESP_FAIL;
-    }
-
-    snprintf(resp_str, resp_size, resp_template, file_content);
-    httpd_resp_send(req, resp_str, strlen(resp_str));
-
-    free(file_content);
-    free(resp_str);
-    return ESP_OK;
-}
-
-/* Inicialização do servidor web */
-httpd_handle_t start_webserver(void) 
-{
-    httpd_config_t config = HTTPD_DEFAULT_CONFIG();
-    httpd_handle_t server = NULL;
-
-    if (httpd_start(&server, &config) == ESP_OK) {
-        httpd_uri_t root = {
-            .uri       = "/",
-            .method    = HTTP_GET,
-            .handler   = root_get_handler,
-            .user_ctx  = NULL
-        };
-        httpd_register_uri_handler(server, &root);
-    }
-    return server;
-}
-
 /* Inicializa sistema de arquivos */
 esp_err_t init_spiffs()
 {
@@ -565,4 +433,185 @@ void write_to_file(const char *filename, const char *data)
     fprintf(f, "%s\n", data); // Escreve a linha no arquivo e adiciona uma quebra de linha
     fclose(f);
     // ESP_LOGI("write_to_file","Dados gravados no arquivo: %s", data);
+}
+
+/*======================================= WIFI ============================================*/
+
+/* Escuta do wifi e detecção de eventos */
+static void wifi_event_handler(void* arg, esp_event_base_t event_base, int32_t event_id, void* event_data)
+{
+    if (event_id == WIFI_EVENT_AP_STACONNECTED) {
+        wifi_event_ap_staconnected_t* event = (wifi_event_ap_staconnected_t*) event_data;
+        ESP_LOGI(TAG, "station "MACSTR" join, AID=%d",
+                 MAC2STR(event->mac), event->aid);
+    } else if (event_id == WIFI_EVENT_AP_STADISCONNECTED) {
+        wifi_event_ap_stadisconnected_t* event = (wifi_event_ap_stadisconnected_t*) event_data;
+        ESP_LOGI(TAG, "station "MACSTR" leave, AID=%d",
+                 MAC2STR(event->mac), event->aid);
+    }
+}
+
+/* Inicia wifi como access point */
+void wifi_init_softap(void)
+{
+    ESP_ERROR_CHECK(esp_netif_init());
+    ESP_ERROR_CHECK(esp_event_loop_create_default());
+    esp_netif_create_default_wifi_ap();
+
+    wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
+    ESP_ERROR_CHECK(esp_wifi_init(&cfg));
+
+    ESP_ERROR_CHECK(esp_event_handler_instance_register(WIFI_EVENT,
+                                                        ESP_EVENT_ANY_ID,
+                                                        &wifi_event_handler,
+                                                        NULL,
+                                                        NULL));
+
+    wifi_config_t wifi_config = {
+        .ap = {
+            .ssid = WIFI_SSID,
+            .ssid_len = strlen(WIFI_SSID),
+            .channel = WIFI_CHANNEL,
+            .password = WIFI_PASS,
+            .max_connection = MAX_STA_CONN,
+#ifdef CONFIG_ESP_WIFI_SOFTAP_SAE_SUPPORT
+            .authmode = WIFI_AUTH_WPA3_PSK,
+            .sae_pwe_h2e = WPA3_SAE_PWE_BOTH,
+#else /* CONFIG_ESP_WIFI_SOFTAP_SAE_SUPPORT */
+            .authmode = WIFI_AUTH_WPA2_PSK,
+#endif
+            .pmf_cfg = {
+                    .required = true,
+            },
+        },
+    };
+    if (strlen(WIFI_PASS) == 0) {
+        wifi_config.ap.authmode = WIFI_AUTH_OPEN;
+    }
+
+    ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_AP));
+    ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_AP, &wifi_config));
+    ESP_ERROR_CHECK(esp_wifi_start());
+
+    ESP_LOGI(TAG, "wifi_init_softap finished. SSID:%s password:%s channel:%d",
+             WIFI_SSID, WIFI_PASS, WIFI_CHANNEL);
+}
+
+/* Desliga wifi */
+void wifi_deinit_softap(void)
+{
+    ESP_ERROR_CHECK(esp_wifi_stop());
+    ESP_ERROR_CHECK(esp_wifi_deinit());
+    ESP_LOGI(TAG, "WiFi desativado após transmissão.");
+}
+
+/* Inicialização do servidor web */
+httpd_handle_t start_webserver(void) 
+{
+    httpd_config_t config = HTTPD_DEFAULT_CONFIG();
+    httpd_handle_t server = NULL;
+
+    if (httpd_start(&server, &config) == ESP_OK) {
+        httpd_uri_t root = {
+            .uri       = "/",
+            .method    = HTTP_GET,
+            .handler   = root_get_handler,
+            .user_ctx  = NULL
+        };
+        httpd_register_uri_handler(server, &root);
+    }
+    return server;
+}
+
+/* Parar webserver */
+void stop_webserver(httpd_handle_t server)
+{
+    if (server != NULL) {
+        httpd_stop(server);
+        ESP_LOGI("WEB_SERVER", "Servidor web parado.");
+    }
+}
+
+// /* Handler para o URI root */
+// esp_err_t root_get_handler(httpd_req_t *req) 
+// {
+//     const char* filename = "/spiffs/temp.txt"; // Altere para o nome do seu arquivo
+//     FILE* f = fopen(filename, "r");
+//     if (f == NULL) {
+//         ESP_LOGE("root_get_handler", "Falha ao abrir o arquivo %s para leitura", filename);
+//         const char* error_resp = "<html><body><h1>Erro</h1><p>Falha ao ler o arquivo.</p></body></html>";
+//         httpd_resp_send(req, error_resp, strlen(error_resp));
+//         return ESP_FAIL;
+//     }
+
+//     // Determina o tamanho do arquivo
+//     fseek(f, 0, SEEK_END);
+//     long fsize = ftell(f);
+//     fseek(f, 0, SEEK_SET);
+
+//     // Aloca memória para o conteúdo do arquivo
+//     char* file_content = malloc(fsize + 1);
+//     if (file_content == NULL) {
+//         ESP_LOGE("root_get_handler", "Falha ao alocar memória para o conteúdo do arquivo");
+//         fclose(f);
+//         const char* error_resp = "<html><body><h1>Erro</h1><p>Falha ao alocar memória para o arquivo.</p></body></html>";
+//         httpd_resp_send(req, error_resp, strlen(error_resp));
+//         return ESP_FAIL;
+//     }
+
+//     // Lê o conteúdo do arquivo
+//     fread(file_content, 1, fsize, f);
+//     file_content[fsize] = '\0';
+//     fclose(f);
+
+//     // Formata a resposta HTML
+//     const char* resp_template = "<html><body><h1>Dados coletados</h1><p>%s</p></body></html>";
+//     int resp_size = strlen(resp_template) + strlen(file_content) + 1;
+//     char* resp_str = malloc(resp_size);
+
+//     if (resp_str == NULL) {
+//         ESP_LOGE("root_get_handler", "Falha ao alocar memória para a resposta");
+//         const char* error_resp = "<html><body><h1>Erro</h1><p>Falha ao gerar a resposta.</p></body></html>";
+//         httpd_resp_send(req, error_resp, strlen(error_resp));
+//         free(file_content);
+//         return ESP_FAIL;
+//     }
+
+//     snprintf(resp_str, resp_size, resp_template, file_content);
+//     httpd_resp_send(req, resp_str, strlen(resp_str));
+
+//     free(file_content);
+//     free(resp_str);
+//     return ESP_OK;
+// }
+
+/* Handler para o URI root */
+esp_err_t root_get_handler(httpd_req_t *req) 
+{
+    const char* filename = "/spiffs/temp.txt"; // Altere para o nome do seu arquivo
+    FILE* f = fopen(filename, "r");
+    if (f == NULL) {
+        ESP_LOGE("root_get_handler", "Falha ao abrir o arquivo %s para leitura", filename);
+        const char* error_resp = "<html><body><h1>Erro</h1><p>Falha ao ler o arquivo.</p></body></html>";
+        httpd_resp_send(req, error_resp, strlen(error_resp));
+        return ESP_FAIL;
+    }
+
+    // Formata a resposta HTML
+    const char* resp_template_start = "<html><body><h1>Dados coletados</h1><pre>";
+    const char* resp_template_end = "</pre></body></html>";
+
+    httpd_resp_send_chunk(req, resp_template_start, strlen(resp_template_start));
+
+    char line[128]; // Buffer para leitura de linhas do arquivo
+    while (fgets(line, sizeof(line), f) != NULL) {
+        httpd_resp_send_chunk(req, line, strlen(line));
+    }
+
+    fclose(f);
+
+    httpd_resp_send_chunk(req, resp_template_end, strlen(resp_template_end));
+    httpd_resp_send_chunk(req, NULL, 0); // Envia o último pedaço da resposta (NULL para sinalizar o fim)
+
+    return ESP_OK;
 }
