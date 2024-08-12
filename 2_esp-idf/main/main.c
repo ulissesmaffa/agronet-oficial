@@ -243,8 +243,9 @@ void timer_evt_task(void *arg)
             double freq = ((double)evt.counter_edges * (double)TIMER_SCALE) / (double)evt.timer_counter_value;
             double temp = calc_temp(freq);
             printf("Event timer [%i]\n",evt.i);
-            printf("Time:  %.5f s\n",(double) evt.timer_counter_value / TIMER_SCALE);
-            printf("Edges: %.2f edges\n",(double) evt.counter_edges);
+            // printf("Time:  %.5f s\n",(double) evt.timer_counter_value / TIMER_SCALE);
+            // printf("Edges: %.2f edges\n",(double) evt.counter_edges);
+            printf("hr: %02i:%02i:%02i\n",timeinfo.hour,timeinfo.minute,timeinfo.second);
             printf("Freq:  %.2f Hz\n",freq);
             printf("Temp:  %.2f ºC\n",temp);
 
