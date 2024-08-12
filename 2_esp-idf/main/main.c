@@ -24,6 +24,12 @@
 #include "lwip/sys.h"
 #include "esp_mac.h"
 
+#include "driver/sdmmc_host.h"
+#include "driver/sdspi_host.h"
+#include "sdmmc_cmd.h"
+#include "esp_vfs_fat.h"
+
+
 #define LED_PIN       2  // LED interno da ESP32
 #define TIMER_DIVIDER 80 // 80/80 = 1MHz -> incremento a cada 1ms
 #define TIMER_SCALE (80000000/TIMER_DIVIDER)
@@ -41,6 +47,15 @@
 #define MAX_STA_CONN       4
 static const char *TAG = "wifi softAP";
 
+/* SD */
+#define PIN_NUM_MISO 19
+#define PIN_NUM_MOSI 23
+#define PIN_NUM_CLK  18
+#define PIN_NUM_CS   5
+
+/* Deletar arquivo */
+#define PIN_DELETE_ARQ 34
+
 /* Estruturas de dados e variáveis globais */
 typedef struct {
     int i;
@@ -48,9 +63,19 @@ typedef struct {
     int16_t counter_edges;
 } timer_event_t;
 
+/* Estrutura de dados simples para controle de tempo */
+typedef struct {
+    int hour;
+    int minute;
+    int second;
+} SimpleTime;
+
+RTC_DATA_ATTR SimpleTime timeinfo;
+
 RTC_DATA_ATTR volatile int counter_index=0;
-RTC_DATA_ATTR volatile int counter_test=0;
 RTC_DATA_ATTR volatile bool operationMode=1; //0 para coleta de dados e 1 para transmissão de dados
+RTC_DATA_ATTR volatile bool deleteArq=0; //0 não faz nada e 1 deleta arquivo e aguarda
+
 volatile int isDataCollectionEnabled=0;
 volatile int isCollectingData=0;
 timer_event_t evt;
@@ -83,6 +108,15 @@ void get_file_info(const char *filename);
 void write_to_file(const char *filename, const char *data);
 void delete_file(const char *filename);
 
+void mount_sdcard();
+void copy_spiffs_to_sdcard(const char *spiffs_file, const char *sdcard_file);
+
+void config_delete_arq();
+
+void zerar_hora(SimpleTime *time);
+void add_minutes(SimpleTime *time, int minutes);
+void print_current_time(SimpleTime *time);
+
 /* MAIN*/
 void app_main(void) 
 {
@@ -91,17 +125,21 @@ void app_main(void)
     config_operation_mode();
     config_pcnt();
     reset_pcnt();
+    
+    config_delete_arq();
 
     config_timer(TIMER_0);
     
     timer_queue = xQueueCreate(10, sizeof(timer_event_t));
-    xTaskCreate(timer_evt_task, "timer_evt_task", 2048, NULL, 5, NULL);
+    // xTaskCreate(timer_evt_task, "timer_evt_task", 2048, NULL, 5, NULL);
+    xTaskCreate(timer_evt_task, "timer_evt_task", 4096, NULL, 5, NULL);
     xTaskCreate(&temp_task, "temp_task", 2048, NULL, 5, NULL);
 
-    // esp_sleep_enable_timer_wakeup(10 * 1500000); //15s
+    esp_sleep_enable_timer_wakeup(10 * 3000000); //30s
     // esp_sleep_enable_timer_wakeup(3600000000ULL); //1h
-    esp_sleep_enable_timer_wakeup(900000000ULL); // 15 minutos
+    // esp_sleep_enable_timer_wakeup(900000000ULL); // 15 minutos
     esp_sleep_enable_ext0_wakeup(BTN_OPERATION_MODE, 1); // Wakeup ao pressionar o botão
+    esp_sleep_enable_ext0_wakeup(PIN_DELETE_ARQ, 1); // Wakeup ao pressionar o botão
     
     //Initialize NVS
     esp_err_t ret = nvs_flash_init();
@@ -121,32 +159,55 @@ void app_main(void)
     get_file_info("/spiffs/temp.txt");
     // delete_file("/spiffs/temp.txt");
 
-    while(1){
-        operationMode=gpio_get_level(BTN_OPERATION_MODE);
+    // Inicializa o cartão SD
+    mount_sdcard();
 
-        // Coleta de dados => operationMode=0
-        if(!operationMode){
-            if(!isCollectingData){
-                ESP_LOGI("MAIN", "MODO DE OPERAÇÃO = %i - COLETA DE DADOS",operationMode);
-                isCollectingData=1; //controla se está coletando dados
-                isDataCollectionEnabled=1; //libera para função de coletar dados
+    // Se for o primeiro evento, inicialize ou zere a hora
+    if (counter_index == 0) {
+        zerar_hora(&timeinfo);
+        print_current_time(&timeinfo);
+    } else {
+        print_current_time(&timeinfo);
+    }
+
+    while(1){
+
+        operationMode=gpio_get_level(BTN_OPERATION_MODE);
+        deleteArq=gpio_get_level(PIN_DELETE_ARQ);
+
+        if(!deleteArq){
+            // Coleta de dados => operationMode=0
+            if(!operationMode){
+                if(!isCollectingData){
+                    ESP_LOGI("MAIN", "MODO DE OPERAÇÃO = %i - COLETA DE DADOS",operationMode);
+                    isCollectingData=1; //controla se está coletando dados
+                    isDataCollectionEnabled=1; //libera para função de coletar dados
+                }
             }
-        }
-        // Transmissão de dados => operationMode=1
-        else if(!isCollectingData){
-            // Modo de transmissão de dados
-            ESP_LOGI("MAIN", "MODO DE OPERAÇÃO = %i - TRANSMISSÃO DE DADOS",operationMode);
-            wifi_init_softap();
-            httpd_handle_t server = start_webserver();  // Inicializa o servidor web
-            while (operationMode){
+            // Transmissão de dados => operationMode=1
+            else if(!isCollectingData){
+                // Modo de transmissão de dados
+                ESP_LOGI("MAIN", "MODO DE OPERAÇÃO = %i - TRANSMISSÃO DE DADOS",operationMode);
+                wifi_init_softap();
+                httpd_handle_t server = start_webserver();  // Inicializa o servidor web
+                while (operationMode){
+                    vTaskDelay(100 / portTICK_PERIOD_MS); //delay do while
+                    operationMode=gpio_get_level(BTN_OPERATION_MODE);
+                }
+                ESP_LOGI("MAIN", "MODO DE OPERAÇÃO = %i - Vou desligar o WIFI agora (isCollectingData=%i)",operationMode,isCollectingData);
+                // Desliga o Wi-Fi após a transmissão
+                stop_webserver(server); 
+                wifi_deinit_softap();
+                zerar_hora(&timeinfo);
+            }
+        }else{
+            ESP_LOGI("MAIN", "DELETE_ARQ = %i - DELETAR ARQUIVO",deleteArq);
+            delete_file("/spiffs/temp.txt");
+            while(deleteArq){
+                deleteArq=gpio_get_level(PIN_DELETE_ARQ);
+                zerar_hora(&timeinfo);
                 vTaskDelay(100 / portTICK_PERIOD_MS); //delay do while
-                operationMode=gpio_get_level(BTN_OPERATION_MODE);
-                
             }
-            ESP_LOGI("MAIN", "MODO DE OPERAÇÃO = %i - Vou desligar o WIFI agora (isCollectingData=%i)",operationMode,isCollectingData);
-            // Desliga o Wi-Fi após a transmissão
-            stop_webserver(server); 
-            wifi_deinit_softap();
         }
 
         vTaskDelay(100 / portTICK_PERIOD_MS); // Atraso para evitar um loop muito rápido
@@ -156,7 +217,6 @@ void app_main(void)
 /* Task principal do sensor */
 void temp_task(void *arg)
 {
-    /*Versão simplificada para teste*/
     while(1){
         if(isDataCollectionEnabled){
             isDataCollectionEnabled=0; //controla a coleta de dados
@@ -170,32 +230,7 @@ void temp_task(void *arg)
         vTaskDelay(100/portTICK_PERIOD_MS);
     }
 
-    //Versão com botões físicos
-    //Variáveis usadas pelo BTN
-    // int counter_btn=0;
-    // bool btn_status=false;
-    // bool last_btn_status=false;
-    // bool ctr_mosfet_in_status=false;
-    // while(1){
-    //     btn_status = gpio_get_level(BTN_PIN);
-    //     if(last_btn_status && !btn_status) {
-    //         counter_btn++;
-    //         ESP_LOGI("MAIN", "[%i] Coletando dados...",counter_btn);
-    //         timer_start(TIMER_GROUP_0, TIMER_0); // Inicia timer
-    //         pcnt_counter_resume(PCNT_UNIT_0);    // Inicia contagem
-    //         gpio_set_level(LED_PIN,1);
-    //     }
-    //     last_btn_status = btn_status;
-    //     vTaskDelay(10/portTICK_PERIOD_MS);
-    //     ctr_mosfet_in_status = gpio_get_level(CONTROL_BTN_IN_MOSFET);
-    //     if (ctr_mosfet_in_status){
-    //         gpio_set_level(LED_PIN,1);
-    //         gpio_set_level(CONTROL_BTN_OUT_MOSFET,1);
-    //     }else{
-    //         gpio_set_level(LED_PIN,0);
-    //         gpio_set_level(CONTROL_BTN_OUT_MOSFET,0);
-    //     }
-    // }
+ 
 }
 
 /* Task para verificar fila de interrupção de timer */
@@ -208,15 +243,19 @@ void timer_evt_task(void *arg)
             double freq = ((double)evt.counter_edges * (double)TIMER_SCALE) / (double)evt.timer_counter_value;
             double temp = calc_temp(freq);
             printf("Event timer [%i]\n",evt.i);
-            // printf("Time:  %.5f s\n",(double) evt.timer_counter_value / TIMER_SCALE);
-            // printf("Edges: %.2f edges\n",(double) evt.counter_edges);
+            printf("Time:  %.5f s\n",(double) evt.timer_counter_value / TIMER_SCALE);
+            printf("Edges: %.2f edges\n",(double) evt.counter_edges);
             printf("Freq:  %.2f Hz\n",freq);
             printf("Temp:  %.2f ºC\n",temp);
 
             //Grava informação em arquivo
-            sprintf(log_buffer, "[%i];Frequencia(Hz):%.2f;Temperatura(C):%.2f ;",evt.i,freq,temp);
-            write_to_file("/spiffs/temp.txt", log_buffer); //ESCREVER AQUI
+            sprintf(log_buffer, "[%i];Frequencia(Hz):%.2f; Temperatura(C):%.2f; Hora:%02i:%02i:%02i;",evt.i,freq,temp,timeinfo.hour,timeinfo.minute,timeinfo.second);
+            write_to_file("/spiffs/temp.txt", log_buffer); //Escreve resultado em arquivo
+            copy_spiffs_to_sdcard("/spiffs/temp.txt", "/sdcard/temp.txt"); //Salva do SD
             
+            //Incremento de hora
+            add_minutes(&timeinfo, 15);
+
             vTaskDelay(10/portTICK_PERIOD_MS);
             ESP_LOGI("timer_evt_task", "Vou colocar a ESP em deep-sleep");
             esp_deep_sleep_start();
@@ -532,59 +571,6 @@ void stop_webserver(httpd_handle_t server)
     }
 }
 
-// /* Handler para o URI root */
-// esp_err_t root_get_handler(httpd_req_t *req) 
-// {
-//     const char* filename = "/spiffs/temp.txt"; // Altere para o nome do seu arquivo
-//     FILE* f = fopen(filename, "r");
-//     if (f == NULL) {
-//         ESP_LOGE("root_get_handler", "Falha ao abrir o arquivo %s para leitura", filename);
-//         const char* error_resp = "<html><body><h1>Erro</h1><p>Falha ao ler o arquivo.</p></body></html>";
-//         httpd_resp_send(req, error_resp, strlen(error_resp));
-//         return ESP_FAIL;
-//     }
-
-//     // Determina o tamanho do arquivo
-//     fseek(f, 0, SEEK_END);
-//     long fsize = ftell(f);
-//     fseek(f, 0, SEEK_SET);
-
-//     // Aloca memória para o conteúdo do arquivo
-//     char* file_content = malloc(fsize + 1);
-//     if (file_content == NULL) {
-//         ESP_LOGE("root_get_handler", "Falha ao alocar memória para o conteúdo do arquivo");
-//         fclose(f);
-//         const char* error_resp = "<html><body><h1>Erro</h1><p>Falha ao alocar memória para o arquivo.</p></body></html>";
-//         httpd_resp_send(req, error_resp, strlen(error_resp));
-//         return ESP_FAIL;
-//     }
-
-//     // Lê o conteúdo do arquivo
-//     fread(file_content, 1, fsize, f);
-//     file_content[fsize] = '\0';
-//     fclose(f);
-
-//     // Formata a resposta HTML
-//     const char* resp_template = "<html><body><h1>Dados coletados</h1><p>%s</p></body></html>";
-//     int resp_size = strlen(resp_template) + strlen(file_content) + 1;
-//     char* resp_str = malloc(resp_size);
-
-//     if (resp_str == NULL) {
-//         ESP_LOGE("root_get_handler", "Falha ao alocar memória para a resposta");
-//         const char* error_resp = "<html><body><h1>Erro</h1><p>Falha ao gerar a resposta.</p></body></html>";
-//         httpd_resp_send(req, error_resp, strlen(error_resp));
-//         free(file_content);
-//         return ESP_FAIL;
-//     }
-
-//     snprintf(resp_str, resp_size, resp_template, file_content);
-//     httpd_resp_send(req, resp_str, strlen(resp_str));
-
-//     free(file_content);
-//     free(resp_str);
-//     return ESP_OK;
-// }
-
 /* Handler para o URI root */
 esp_err_t root_get_handler(httpd_req_t *req) 
 {
@@ -614,4 +600,110 @@ esp_err_t root_get_handler(httpd_req_t *req)
     httpd_resp_send_chunk(req, NULL, 0); // Envia o último pedaço da resposta (NULL para sinalizar o fim)
 
     return ESP_OK;
+}
+
+/*======================================= SD ============================================*/
+
+void mount_sdcard() {
+    esp_err_t ret;
+
+    sdmmc_host_t host = SDSPI_HOST_DEFAULT();
+    host.slot = VSPI_HOST;
+
+    // Configuração do barramento SPI
+    spi_bus_config_t bus_cfg = {
+        .mosi_io_num = PIN_NUM_MOSI,
+        .miso_io_num = PIN_NUM_MISO,
+        .sclk_io_num = PIN_NUM_CLK,
+        .quadwp_io_num = -1,
+        .quadhd_io_num = -1,
+        .max_transfer_sz = 4000,
+    };
+
+    ret = spi_bus_initialize(host.slot, &bus_cfg, SDSPI_DEFAULT_DMA);
+    if (ret != ESP_OK) {
+        ESP_LOGE("SDCARD", "Failed to initialize SPI bus: %s", esp_err_to_name(ret));
+        return;
+    }
+
+    sdspi_device_config_t slot_config = SDSPI_DEVICE_CONFIG_DEFAULT();
+    slot_config.gpio_cs = PIN_NUM_CS;
+    slot_config.host_id = host.slot;
+
+    esp_vfs_fat_sdmmc_mount_config_t mount_config = {
+        .format_if_mount_failed = false,
+        .max_files = 5,
+        .allocation_unit_size = 16 * 1024
+    };
+
+    sdmmc_card_t* card;
+    ret = esp_vfs_fat_sdspi_mount("/sdcard", &host, &slot_config, &mount_config, &card);
+
+    if (ret != ESP_OK) {
+        if (ret == ESP_FAIL) {
+            ESP_LOGE("SDCARD", "Failed to mount filesystem. "
+                                "If you want the card to be formatted, set format_if_mount_failed = true.");
+        } else {
+            ESP_LOGE("SDCARD", "Failed to initialize the card (%s). "
+                                "Make sure SD card lines have pull-up resistors in place.", esp_err_to_name(ret));
+        }
+        return;
+    }
+
+    ESP_LOGI("SDCARD", "SD card mounted successfully");
+}
+  
+void copy_spiffs_to_sdcard(const char *spiffs_file, const char *sdcard_file) {
+    FILE *spiffs_f = fopen(spiffs_file, "r");
+    if (spiffs_f == NULL) {
+        ESP_LOGE("COPY", "Failed to open SPIFFS file for reading");
+        return;
+    }
+
+    FILE *sdcard_f = fopen(sdcard_file, "w");
+    if (sdcard_f == NULL) {
+        ESP_LOGE("COPY", "Failed to open SD card file for writing");
+        fclose(spiffs_f);
+        return;
+    }
+
+    char buffer[128];
+    while (fgets(buffer, sizeof(buffer), spiffs_f) != NULL) {
+        fputs(buffer, sdcard_f);
+    }
+
+    fclose(spiffs_f);
+    fclose(sdcard_f);
+    ESP_LOGI("COPY", "File copied from SPIFFS to SD card successfully");
+}
+
+//usuário apagar arquivo para recomeçar
+void config_delete_arq(){
+    ESP_LOGI("CONFIG_DELETE_ARQ", "Configurando controle por botão para deletar arquivo | PIN = %i",PIN_DELETE_ARQ);
+    esp_rom_gpio_pad_select_gpio(PIN_DELETE_ARQ); 
+    gpio_set_direction(PIN_DELETE_ARQ, GPIO_MODE_INPUT);
+}
+
+//data e hora inicio
+void zerar_hora(SimpleTime *time) {
+    time->hour = 0;
+    time->minute = 0;
+    time->second = 0;
+}
+
+void add_minutes(SimpleTime *time, int minutes) {
+    // Incrementa os minutos
+    time->minute += minutes;
+
+    // Verifica se os minutos excedem 59
+    if (time->minute >= 60) {
+        // Incrementa as horas correspondentes
+        time->hour += time->minute / 60;
+        // Ajusta os minutos para ficar no intervalo de 0 a 59
+        time->minute %= 60;
+    }
+}
+
+void print_current_time(SimpleTime *time) {
+    printf("Hora atual: %02d:%02d:%02d\n", time->hour, time->minute, time->second);
 }
