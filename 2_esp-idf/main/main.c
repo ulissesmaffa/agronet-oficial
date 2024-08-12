@@ -135,9 +135,9 @@ void app_main(void)
     xTaskCreate(timer_evt_task, "timer_evt_task", 4096, NULL, 5, NULL);
     xTaskCreate(&temp_task, "temp_task", 2048, NULL, 5, NULL);
 
-    esp_sleep_enable_timer_wakeup(10 * 3000000); //30s
+    // esp_sleep_enable_timer_wakeup(10 * 3000000); //30s
     // esp_sleep_enable_timer_wakeup(3600000000ULL); //1h
-    // esp_sleep_enable_timer_wakeup(900000000ULL); // 15 minutos
+    esp_sleep_enable_timer_wakeup(900000000ULL); // 15 minutos
     esp_sleep_enable_ext0_wakeup(BTN_OPERATION_MODE, 1); // Wakeup ao pressionar o botão
     esp_sleep_enable_ext0_wakeup(PIN_DELETE_ARQ, 1); // Wakeup ao pressionar o botão
     
