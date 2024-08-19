@@ -56,6 +56,9 @@ static const char *TAG = "wifi softAP";
 /* Deletar arquivo */
 #define PIN_DELETE_ARQ 34
 
+/* Wakeup */
+#define BTN_WAKEUP 25
+
 /* Estruturas de dados e variáveis globais */
 typedef struct {
     int i;
@@ -117,6 +120,8 @@ void zerar_hora(SimpleTime *time);
 void add_minutes(SimpleTime *time, int minutes);
 void print_current_time(SimpleTime *time);
 
+void config_wakeup();
+
 /* MAIN*/
 void app_main(void) 
 {
@@ -125,6 +130,7 @@ void app_main(void)
     config_operation_mode();
     config_pcnt();
     reset_pcnt();
+    config_wakeup();
     
     config_delete_arq();
 
@@ -138,8 +144,6 @@ void app_main(void)
     // esp_sleep_enable_timer_wakeup(10 * 3000000); //30s
     // esp_sleep_enable_timer_wakeup(3600000000ULL); //1h
     esp_sleep_enable_timer_wakeup(900000000ULL); // 15 minutos
-    esp_sleep_enable_ext0_wakeup(BTN_OPERATION_MODE, 1); // Wakeup ao pressionar o botão
-    esp_sleep_enable_ext0_wakeup(PIN_DELETE_ARQ, 1); // Wakeup ao pressionar o botão
     
     //Initialize NVS
     esp_err_t ret = nvs_flash_init();
@@ -475,6 +479,15 @@ void write_to_file(const char *filename, const char *data)
     // ESP_LOGI("write_to_file","Dados gravados no arquivo: %s", data);
 }
 
+void config_wakeup(){
+    esp_rom_gpio_pad_select_gpio(BTN_WAKEUP); 
+    gpio_set_direction(BTN_WAKEUP, GPIO_MODE_INPUT);
+
+    // esp_sleep_enable_ext0_wakeup(BTN_OPERATION_MODE, 1); //Wakeup ao pressionar o botão
+    // esp_sleep_enable_ext0_wakeup(PIN_DELETE_ARQ, 1); //Wakeup ao pressionar o botão
+    esp_sleep_enable_ext0_wakeup(BTN_WAKEUP, 1); // Wakeup ao pressionar o botão
+}
+
 /*======================================= WIFI ============================================*/
 
 /* Escuta do wifi e detecção de eventos */
@@ -514,16 +527,16 @@ void wifi_init_softap(void)
             .channel = WIFI_CHANNEL,
             .password = WIFI_PASS,
             .max_connection = MAX_STA_CONN,
-#ifdef CONFIG_ESP_WIFI_SOFTAP_SAE_SUPPORT
-            .authmode = WIFI_AUTH_WPA3_PSK,
-            .sae_pwe_h2e = WPA3_SAE_PWE_BOTH,
-#else /* CONFIG_ESP_WIFI_SOFTAP_SAE_SUPPORT */
-            .authmode = WIFI_AUTH_WPA2_PSK,
-#endif
-            .pmf_cfg = {
-                    .required = true,
+    #ifdef CONFIG_ESP_WIFI_SOFTAP_SAE_SUPPORT
+                .authmode = WIFI_AUTH_WPA3_PSK,
+                .sae_pwe_h2e = WPA3_SAE_PWE_BOTH,
+    #else /* CONFIG_ESP_WIFI_SOFTAP_SAE_SUPPORT */
+                .authmode = WIFI_AUTH_WPA2_PSK,
+    #endif
+                .pmf_cfg = {
+                        .required = true,
+                },
             },
-        },
     };
     if (strlen(WIFI_PASS) == 0) {
         wifi_config.ap.authmode = WIFI_AUTH_OPEN;
