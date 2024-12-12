@@ -54,7 +54,7 @@ static const char *TAG = "wifi softAP";
 #define PIN_NUM_CS   5
 
 /* Deletar arquivo */
-#define PIN_DELETE_ARQ 34
+#define PIN_DELETE_FILE 34
 
 /* Wakeup */
 #define BTN_WAKEUP 25
@@ -177,7 +177,7 @@ void app_main(void)
     while(1){
 
         operationMode=gpio_get_level(BTN_OPERATION_MODE);
-        deleteArq=gpio_get_level(PIN_DELETE_ARQ);
+        deleteArq=gpio_get_level(PIN_DELETE_FILE);
 
         if(!deleteArq){
             // Coleta de dados => operationMode=0
@@ -208,7 +208,7 @@ void app_main(void)
             ESP_LOGI("MAIN", "DELETE_ARQ = %i - DELETAR ARQUIVO",deleteArq);
             delete_file("/spiffs/temp.txt");
             while(deleteArq){
-                deleteArq=gpio_get_level(PIN_DELETE_ARQ);
+                deleteArq=gpio_get_level(PIN_DELETE_FILE);
                 zerar_hora(&timeinfo);
                 vTaskDelay(100 / portTICK_PERIOD_MS); //delay do while
             }
@@ -484,7 +484,7 @@ void config_wakeup(){
     gpio_set_direction(BTN_WAKEUP, GPIO_MODE_INPUT);
 
     // esp_sleep_enable_ext0_wakeup(BTN_OPERATION_MODE, 1); //Wakeup ao pressionar o botão
-    // esp_sleep_enable_ext0_wakeup(PIN_DELETE_ARQ, 1); //Wakeup ao pressionar o botão
+    // esp_sleep_enable_ext0_wakeup(PIN_DELETE_FILE, 1); //Wakeup ao pressionar o botão
     esp_sleep_enable_ext0_wakeup(BTN_WAKEUP, 1); // Wakeup ao pressionar o botão
 }
 
@@ -693,9 +693,9 @@ void copy_spiffs_to_sdcard(const char *spiffs_file, const char *sdcard_file) {
 
 //usuário apagar arquivo para recomeçar
 void config_delete_arq(){
-    ESP_LOGI("CONFIG_DELETE_ARQ", "Configurando controle por botão para deletar arquivo | PIN = %i",PIN_DELETE_ARQ);
-    esp_rom_gpio_pad_select_gpio(PIN_DELETE_ARQ); 
-    gpio_set_direction(PIN_DELETE_ARQ, GPIO_MODE_INPUT);
+    ESP_LOGI("CONFIG_DELETE_ARQ", "Configurando controle por botão para deletar arquivo | PIN = %i",PIN_DELETE_FILE);
+    esp_rom_gpio_pad_select_gpio(PIN_DELETE_FILE); 
+    gpio_set_direction(PIN_DELETE_FILE, GPIO_MODE_INPUT);
 }
 
 //data e hora inicio
